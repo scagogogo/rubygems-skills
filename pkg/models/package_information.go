@@ -110,7 +110,7 @@ type PackageInformation struct {
 	ProjectURI       string       `json:"project_uri"`
 	GemURI           string       `json:"gem_uri"`
 	HomepageURI      string       `json:"homepage_uri"`
-	WikiURI          interface{}  `json:"wiki_uri"`
+	WikiURI         string       `json:"wiki_uri"`
 	DocumentationURI string       `json:"documentation_uri"`
 	MailingListURI   string       `json:"mailing_list_uri"`
 	SourceCodeURI    string       `json:"source_code_uri"`

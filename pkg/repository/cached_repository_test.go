@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/scagogogo/rubygems-crawler/pkg/cache"
-	"github.com/scagogogo/rubygems-crawler/pkg/models"
+	"github.com/scagogogo/rubygems-skills/pkg/cache"
+	"github.com/scagogogo/rubygems-skills/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,6 +67,54 @@ func (m *MockRepo) LatestGems(ctx context.Context) ([]*models.PackageInformation
 }
 
 func (m *MockRepo) GetReverseDependencies(ctx context.Context, gemName string) ([]string, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetVersionReverseDependencies(ctx context.Context, fullName string) ([]string, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) SearchAutocomplete(ctx context.Context, query string) ([]string, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetGemVersionDetail(ctx context.Context, gemName, version string) (*models.VersionDetail, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) JustUpdatedGems(ctx context.Context) ([]*models.PackageInformation, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) TopDownloads(ctx context.Context) ([]*models.TopDownloadedGem, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetUserProfile(ctx context.Context, handleOrID string) (*models.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetOwnedGems(ctx context.Context) ([]*models.PackageInformation, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetGemsByOwner(ctx context.Context, handleOrID string) ([]*models.PackageInformation, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetGemOwners(ctx context.Context, gemName string) ([]*models.Owner, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetAttestations(ctx context.Context, gemName, version string) ([]*models.Attestation, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetGemVersionContents(ctx context.Context, gemName, version string) (*models.VersionContent, error) {
+	return nil, nil
+}
+
+func (m *MockRepo) GetMFAStatus(ctx context.Context) (*models.MFAStatus, error) {
 	return nil, nil
 }
 

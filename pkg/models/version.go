@@ -17,8 +17,9 @@ type Version struct {
 	Prerelease      bool      `json:"prerelease"`
 	Licenses        []string  `json:"licenses"`
 
-	// TODO 这个字段长啥样
-	Requirements []interface{} `json:"requirements"`
+	// Requirements 版本要求，通常是一个字符串数组
+	// 例如: [">= 2.5.0", "< 3.0"]
+	Requirements []string `json:"requirements"`
 
 	Sha string `json:"sha"`
 }

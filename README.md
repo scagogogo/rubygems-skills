@@ -1,290 +1,412 @@
-# RubyGems爬虫 (RubyGems Crawler)
+# rubygems-skills
 
-这是一个Go语言编写的RubyGems API客户端，用于获取RubyGems.org的包信息。它支持多种API操作、国内镜像源、错误处理和缓存机制。
+[![Go Reference](https://pkg.go.dev/badge/github.com/scagogogo/rubygems-skills.svg)](https://pkg.go.dev/github.com/scagogogo/rubygems-skills)
+[![Go Report Card](https://goreportcard.com/badge/github.com/scagogogo/rubygems-skills)](https://goreportcard.com/report/github.com/scagogogo/rubygems-skills)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/badge/Go-%3E%3D1.21-blue)](https://go.dev/)
 
-[![GoDoc](https://godoc.org/github.com/scagogogo/rubygems-crawler?status.svg)](https://godoc.org/github.com/scagogogo/rubygems-crawler)
-[![Go Report Card](https://goreportcard.com/badge/github.com/scagogogo/rubygems-crawler)](https://goreportcard.com/report/github.com/scagogogo/rubygems-crawler)
+[🇨🇳 简体中文](README.zh-CN.md)
 
-## 功能特点
+A production-ready Go SDK for the [RubyGems.org](https://rubygems.org) API. It provides a complete, type-safe client that covers **all public API v1 and v2 endpoints** — including package queries, search, versions, downloads, dependencies, user/owner management, API key management, MFA status, webhooks, attestations, and gem publishing — with built-in caching, concurrent bulk operations, retry with exponential backoff, mirror repository support, and a full-featured CLI.
 
-- 支持RubyGems API v1/v2的全部主要功能
-- 提供多个国内镜像源支持（Ruby China、清华大学、阿里云）
-- 智能错误处理和自动重试机制
-- HTTP代理支持和API Token认证
-- 内存缓存机制，支持自定义过期时间
-- 批量并发请求功能，提高大规模数据获取效率
-- 完整的单元测试，保证代码质量
-- 完整的命令行工具，支持JSON格式输出
+## Why This SDK?
 
-## 速率限制
+If you're building Go tooling that interacts with the Ruby gem ecosystem — dependency analysis, security auditing, registry mirroring, CI/CD integration, or data pipelines — you need a reliable, typed API client. This SDK eliminates the need to hand-craft HTTP calls, parse JSON, handle rate limits, and manage retries. It wraps every RubyGems.org endpoint into idiomatic Go with proper error types, URL-safe parameter encoding, and optional caching out of the box.
 
-RubyGems.org API有速率限制，详情参考官方文档:
+---
 
-```
-https://guides.rubygems.org/rubygems-org-rate-limits/
-```
+## Features
 
-使用Token认证可以提高API请求配额。
+- **Complete API Coverage** — All RubyGems API v1/v2 endpoints: packages, search, versions, downloads, dependencies, reverse dependencies, user profiles, owners, API keys, MFA, webhooks, attestations, and gem publishing
+- **Multi-Repository Support** — Built-in mirrors (Ruby China, Tsinghua, Alibaba Cloud) plus `NewCustomRepository()` for private/custom gem servers
+- **Smart Error Handling** — Typed errors (`IsNotFound`, `IsRateLimited`, `IsUnauthorized`) with structured `APIError` for programmatic handling
+- **Automatic Retry** — Configurable retry with exponential backoff for transient failures (network errors, 429, 5xx). All request types (GET, POST, DELETE, form, multipart) support retry
+- **URL-Safe Encoding** — All path and query parameters are properly encoded via `url.PathEscape` / `url.QueryEscape` to handle special characters
+- **In-Memory Cache** — Thread-safe cache with TTL support, auto-cleanup, and `Cache` interface for custom implementations
+- **Bulk Operations** — Concurrent batch requests with configurable concurrency for high-throughput data collection
+- **Auto-Install** — Cross-platform automatic Ruby/RubyGems installation supporting apt, yum, dnf, apk, pacman, brew, choco, scoop, and zypper
+- **HTTP Proxy & Auth** — Full support for corporate proxy environments, API token authentication, and HTTP Basic authentication
+- **CLI Tool** — Command-line interface for quick queries with JSON output, mirror selection, and auto-install
+- **Type-Safe Models** — Complete Go struct definitions matching the RubyGems API JSON schema
+- **Comprehensive Tests** — Unit tests for all packages, Docker-based cross-platform integration tests, and race detector coverage
 
-## 安装
+---
+
+## Installation
 
 ```bash
-go get github.com/scagogogo/rubygems-crawler
+go get github.com/scagogogo/rubygems-skills
 ```
 
-## 快速开始
+**Requirements:** Go 1.21+
 
-### 基本使用示例
+---
+
+## Quick Start
+
+### Basic Usage
 
 ```go
 package main
 
 import (
-	"context"
-	"fmt"
-	"github.com/scagogogo/rubygems-crawler/pkg/repository"
+    "context"
+    "fmt"
+
+    "github.com/scagogogo/rubygems-skills/pkg/repository"
 )
 
 func main() {
-	// 创建默认仓库客户端
-	repo := repository.NewRepository()
-	
-	// 获取特定gem包信息
-	pkg, err := repo.GetPackage(context.Background(), "rails")
-	if err != nil {
-		panic(err)
-	}
-	
-	fmt.Printf("Rails版本: %s\n", pkg.Version)
-	fmt.Printf("下载量: %d\n", pkg.Downloads)
-	fmt.Printf("作者: %s\n", pkg.Authors)
+    repo := repository.NewRepository()
+
+    pkg, err := repo.GetPackage(context.Background(), "rails")
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Printf("Name: %s\n", pkg.Name)
+    fmt.Printf("Version: %s\n", pkg.Version)
+    fmt.Printf("Downloads: %d\n", pkg.Downloads)
+    fmt.Printf("Authors: %s\n", pkg.Authors)
 }
 ```
 
-### 使用国内镜像源
+### Using Mirror Repositories
 
 ```go
-// 使用Ruby中国镜像源
+// Ruby China Mirror (recommended for users in China)
 repo := repository.NewRubyChinaRepository()
 
-// 或使用清华大学镜像源
-// repo := repository.NewTSingHuaRepository()
+// Tsinghua University Mirror
+repo := repository.NewTSingHuaRepository()
 
-// 或使用阿里云镜像源
-// repo := repository.NewAliYunRepository()
+// Alibaba Cloud Mirror
+repo := repository.NewAliYunRepository()
+
+// Custom / Private gem server
+repo := repository.NewCustomRepository("https://gems.example.com")
 ```
 
-### 使用缓存机制
+### Caching
 
 ```go
-// 创建内存缓存，设置默认过期时间和清理间隔
-memCache := cache.NewMemoryCache(10*time.Minute, 30*time.Minute)
+import (
+    "time"
+    "github.com/scagogogo/rubygems-skills/pkg/cache"
+    "github.com/scagogogo/rubygems-skills/pkg/repository"
+)
 
-// 创建缓存仓库包装器，默认缓存时间5分钟
+memCache := cache.NewMemoryCache(10*time.Minute, 30*time.Minute)
 cachedRepo := repository.NewCachedRepository(repo, 5*time.Minute, memCache)
 
-// 使用缓存仓库像普通仓库一样进行操作
-pkg, err := cachedRepo.GetPackage(context.Background(), "rails")
+// First call hits the API
+pkg, _ := cachedRepo.GetPackage(ctx, "rails")
 
-// 清空缓存
+// Second call returns from cache
+pkg, _ = cachedRepo.GetPackage(ctx, "rails")
+
 cachedRepo.ClearCache()
-
-// 关闭缓存
-defer cachedRepo.Close()
+cachedRepo.Close()
 ```
 
-### 批量并发请求
+### Bulk Concurrent Requests
 
 ```go
-// 定义要批量获取的gem包列表
 gems := []string{"rails", "rack", "activesupport", "rake", "bundler"}
-
-// 设置批量操作选项，最大并发数为5
 options := repository.NewBulkOptions().WithMaxConcurrency(5)
-
-// 批量获取包信息
 results := repo.BulkGetPackages(ctx, gems, options)
 
-// 处理结果
 for _, result := range results {
     if result.Error != nil {
-        fmt.Printf("获取 %s 失败: %v\n", result.Key, result.Error)
+        fmt.Printf("%s failed: %v\n", result.Key, result.Error)
         continue
     }
-    
-    pkg := result.Value
-    fmt.Printf("包名: %s, 版本: %s\n", pkg.Name, pkg.Version)
+    fmt.Printf("%s: v%s (%d downloads)\n", result.Value.Name, result.Value.Version, result.Value.Downloads)
 }
 ```
 
-### 使用Token认证
+### Error Handling
 
 ```go
-// 设置Token
-options := repository.NewOptions().SetToken("your-api-token")
-repo := repository.NewRepository(options)
+pkg, err := repo.GetPackage(ctx, "non-existent-gem")
+if err != nil {
+    if repository.IsNotFound(err) {
+        fmt.Println("Package not found")
+    } else if repository.IsRateLimited(err) {
+        fmt.Println("Rate limited — back off and retry")
+    } else if repository.IsUnauthorized(err) {
+        fmt.Println("Authentication failed")
+    } else {
+        var apiErr *repository.APIError
+        if errors.As(err, &apiErr) {
+            fmt.Printf("HTTP %d at %s: %s\n", apiErr.StatusCode, apiErr.URL, apiErr.Response)
+        }
+    }
+}
 ```
 
-### 使用代理
+### Authentication & Proxy
 
 ```go
-// 设置HTTP代理
+// API Token (increases rate limits)
+options := repository.NewOptions().SetToken("your-api-token")
+repo := repository.NewRepository(options)
+
+// HTTP Proxy (corporate environments)
 options := repository.NewOptions().SetProxy("http://127.0.0.1:7890")
 repo := repository.NewRepository(options)
 ```
 
-### 自定义重试策略
+### Custom Retry Strategy
 
 ```go
-// 配置重试策略
-retryOptions := repository.NewDefaultRetryOptions().
-	WithMaxAttempts(5).
-	WithWaitTime(2 * time.Second).
-	WithExponentialBackoff(true)
-	
-options := repository.NewOptions().SetRetryOptions(retryOptions)
+retryOpts := repository.NewDefaultRetryOptions().
+    WithMaxAttempts(5).
+    WithWaitTime(2 * time.Second).
+    WithExponentialBackoff(true)
+
+options := repository.NewOptions().SetRetryOptions(retryOpts)
 repo := repository.NewRepository(options)
 ```
 
-### 错误处理
+### Write Operations (Auth Required)
 
 ```go
-pkg, err := repo.GetPackage(ctx, "non-existent-package")
-if err != nil {
-    if repository.IsNotFound(err) {
-        fmt.Println("包不存在")
-    } else if repository.IsRateLimited(err) {
-        fmt.Println("API请求被限流")
-    } else if repository.IsUnauthorized(err) {
-        fmt.Println("认证失败")
-    } else {
-        fmt.Printf("其他错误: %v\n", err)
-    }
+options := repository.NewOptions().SetToken("your-api-token")
+writeRepo := repository.NewWriteRepository(options)
+
+// Yank (unpublish) a gem version
+result, err := writeRepo.YankGem(ctx, "my-gem", "1.0.0")
+
+// Manage gem owners
+err = writeRepo.AddGemOwner(ctx, "my-gem", "user@example.com", "owner")
+err = writeRepo.RemoveGemOwner(ctx, "my-gem", "user@example.com")
+
+// Manage webhooks
+err = writeRepo.CreateWebhook(ctx, "my-gem", "https://example.com/webhook")
+webhooks, err := writeRepo.ListWebhooks(ctx)
+err = writeRepo.DeleteWebhook(ctx, "my-gem", "https://example.com/webhook")
+```
+
+### API Key Management (HTTP Basic Auth)
+
+```go
+// Retrieve a legacy API key
+apiKey, err := writeRepo.GetAPIKey(ctx, "username", "password")
+
+// Create a new scoped API key
+req := &models.CreateAPIKeyRequest{
+    Name:   "ci-key",
+    Scopes: []string{"push_rubygem", "yank_rubygem"},
+    MFA:    "enabled",
+}
+apiKey, err = writeRepo.CreateAPIKey(ctx, "username", "password", req)
+
+// Update an API key's scopes
+updateReq := &models.UpdateAPIKeyRequest{
+    APIKey: "existing-key-value",
+    Scopes: []string{"index_rubygems"},
+}
+apiKey, err = writeRepo.UpdateAPIKey(ctx, "username", "password", updateReq)
+```
+
+### MFA Status
+
+```go
+// Check MFA status for the authenticated user (requires API Token)
+status, err := repo.GetMFAStatus(ctx)
+fmt.Printf("MFA enabled: %v, level: %s\n", status.Enabled, status.Level)
+```
+
+### Authenticated User Profile
+
+```go
+// Get your full profile (including private fields, requires HTTP Basic Auth)
+profile, err := writeRepo.GetMyProfile(ctx, "username", "password")
+```
+
+### V2 API — Richer Version Details
+
+```go
+// Detailed version info via API v2 (includes spec_sha, yanked, full deps)
+detail, err := repo.GetGemVersionDetail(ctx, "rails", "7.0.5")
+fmt.Printf("Yanked: %v\n", detail.Yanked)
+fmt.Printf("Spec SHA: %s\n", detail.SpecSha)
+
+// File checksums for a version
+contents, err := repo.GetGemVersionContents(ctx, "rails", "7.0.5")
+for file, sha := range contents.Files {
+    fmt.Printf("  %s: %s\n", file, sha)
 }
 ```
 
-## 命令行工具
+### User & Owner Info
 
-项目提供了命令行工具，可以直接在终端使用：
+```go
+profile, err := repo.GetUserProfile(ctx, "qrush")
+gems, err := repo.GetGemsByOwner(ctx, "qrush")
+owners, err := repo.GetGemOwners(ctx, "rails")
+```
+
+### Version-Level Reverse Dependencies
+
+```go
+// Get packages that depend on a specific version (fullName = "gemname-version")
+deps, err := repo.GetVersionReverseDependencies(ctx, "rack-2.2.7")
+```
+
+### Top Downloads & Autocomplete
+
+```go
+topGems, err := repo.TopDownloads(ctx)
+suggestions, err := repo.SearchAutocomplete(ctx, "rails")
+```
+
+---
+
+## CLI Tool
 
 ```bash
-# 获取包信息
-rubygems-cli -get -gem rails
+go build -o rubygems-cli ./cmd/rubygems/
 
-# 搜索包
-rubygems-cli -search -query rails -limit 10
-
-# 获取版本列表
-rubygems-cli -versions -gem rails -limit 20
-
-# 获取依赖信息
-rubygems-cli -deps -gem rails
-
-# 获取反向依赖
-rubygems-cli -rdeps -gem rails -limit 50
-
-# 使用JSON格式输出
-rubygems-cli -get -gem rails -json
-
-# 使用镜像源
-rubygems-cli -get -gem rails -mirror ruby-china
-
-# 启用缓存
-rubygems-cli -get -gem rails -cache
+./rubygems-cli -get -gem rails          # Get package info
+./rubygems-cli -search -query rails     # Search packages
+./rubygems-cli -versions -gem rails     # List versions
+./rubygems-cli -deps -gem rails         # Show dependencies
+./rubygems-cli -rdeps -gem rails        # Show reverse dependencies
+./rubygems-cli -get -gem rails -json    # JSON output
+./rubygems-cli -get -gem rails -mirror ruby-china  # Use mirror
+./rubygems-cli -install                 # Auto-install Ruby/RubyGems
+./rubygems-cli -help                    # Help
 ```
 
-## 项目结构
+---
+
+## API Reference
+
+### Repository Interface (Read Operations)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GetPackage(ctx, gem)` | `GET /api/v1/gems/{gem}.json` | Get detailed package info |
+| `Search(ctx, query, page)` | `GET /api/v1/search.json?query=` | Search packages |
+| `SearchAutocomplete(ctx, query)` | `GET /api/v1/search/autocomplete.json` | Search autocomplete suggestions |
+| `GetGemVersions(ctx, gem)` | `GET /api/v1/versions/{gem}.json` | List all versions |
+| `GetGemLatestVersion(ctx, gem)` | `GET /api/v1/versions/{gem}/latest.json` | Get latest version |
+| `GetGemVersionDetail(ctx, gem, ver)` | `GET /api/v2/rubygems/{gem}/versions/{ver}.json` | **V2** Detailed version info |
+| `GetTimeFrameVersions(ctx, from, to)` | `GET /api/v1/timeframe_versions.json` | Versions in time range |
+| `Downloads(ctx)` | `GET /api/v1/downloads.json` | Total repository downloads |
+| `VersionDownloads(ctx, gem, ver)` | `GET /api/v1/downloads/{gem}-{ver}.json` | Version download count |
+| `TopDownloads(ctx)` | `GET /api/v1/downloads/all.json` | Top 50 most downloaded gems |
+| `GetDependencies(ctx, gems...)` | `GET /api/v1/dependencies?gems=` | Dependency info |
+| `GetReverseDependencies(ctx, gem)` | `GET /api/v1/gems/{gem}/reverse_dependencies.json` | Reverse dependencies |
+| `GetVersionReverseDependencies(ctx, fullName)` | `GET /api/v1/versions/{fullName}/reverse_dependencies.json` | Version-level reverse dependencies |
+| `LatestGems(ctx)` | `GET /api/v1/activity/latest.json` | Recently published gems |
+| `JustUpdatedGems(ctx)` | `GET /api/v1/activity/just_updated.json` | Recently updated gems |
+| `GetUserProfile(ctx, handle)` | `GET /api/v1/profiles/{handle}.json` | User profile info |
+| `GetOwnedGems(ctx)` | `GET /api/v1/gems.json` | List your gems (auth required) |
+| `GetGemsByOwner(ctx, handle)` | `GET /api/v1/owners/{handle}/gems.json` | Gems by user |
+| `GetGemOwners(ctx, gem)` | `GET /api/v1/gems/{gem}/owners.json` | Gem owners |
+| `GetAttestations(ctx, gem, ver)` | `GET /api/v1/attestations/{gem}-{ver}.json` | Sigstore attestations |
+| `GetGemVersionContents(ctx, gem, ver)` | `GET /api/v2/rubygems/{gem}/versions/{ver}/contents.json` | **V2** Version file checksums |
+| `GetMFAStatus(ctx)` | `GET /api/v1/multifactor_auth` | MFA status (auth required) |
+| `BulkGetPackages(ctx, gems, opts)` | (concurrent) | Bulk package fetch |
+| `BulkGetVersions(ctx, gems, opts)` | (concurrent) | Bulk version fetch |
+| `BulkGetDependencies(ctx, gems, opts)` | (concurrent) | Bulk dependency fetch |
+| `BulkGetReverseDependencies(ctx, gems, opts)` | (concurrent) | Bulk reverse dependency fetch |
+
+### WriteRepository Interface (Auth Required)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `PushGem(ctx, file)` | `POST /api/v1/gems` | Publish a gem |
+| `YankGem(ctx, gem, ver)` | `DELETE /api/v1/gems/yank` | Yank (unpublish) a version |
+| `YankGemWithPlatform(ctx, gem, ver, platform)` | `DELETE /api/v1/gems/yank` | Yank with platform |
+| `AddGemOwner(ctx, gem, email, role)` | `POST /api/v1/gems/{gem}/owners` | Add gem owner |
+| `RemoveGemOwner(ctx, gem, email)` | `DELETE /api/v1/gems/{gem}/owners` | Remove gem owner |
+| `UpdateGemOwnerRole(ctx, gem, email, role)` | `PATCH /api/v1/gems/{gem}/owners` | Update owner role |
+| `ListWebhooks(ctx)` | `GET /api/v1/web_hooks.json` | List webhooks |
+| `CreateWebhook(ctx, gem, url)` | `POST /api/v1/web_hooks` | Create webhook |
+| `DeleteWebhook(ctx, gem, url)` | `DELETE /api/v1/web_hooks/remove` | Delete webhook |
+| `FireWebhook(ctx, gem, url)` | `POST /api/v1/web_hooks/fire` | Test fire webhook |
+| `GetAPIKey(ctx, user, pass)` | `GET /api/v1/api_key` | Retrieve API key (Basic Auth) |
+| `CreateAPIKey(ctx, user, pass, req)` | `POST /api/v1/api_key` | Create scoped API key (Basic Auth) |
+| `UpdateAPIKey(ctx, user, pass, req)` | `PATCH /api/v1/api_key` | Update API key scopes (Basic Auth) |
+| `GetMyProfile(ctx, user, pass)` | `GET /api/v1/profiles/me.json` | Full authenticated profile (Basic Auth) |
+
+---
+
+## Project Structure
 
 ```
-├── cmd/                  # 命令行工具
-│   └── rubygems/         # RubyGems命令行客户端
-├── examples/             # 使用示例
-│   ├── basic_usage.go    # 基本使用示例
-│   ├── bulk/             # 批量操作示例
-│   └── cache/            # 缓存使用示例
-├── pkg/                  # 项目核心包
-│   ├── cache/            # 缓存实现
-│   ├── models/           # 数据模型
-│   └── repository/       # 仓库实现
-└── tests/                # 测试目录
-    └── integration/      # 集成测试
+rubygems-skills/
+├── cmd/rubygems/              # CLI tool
+├── examples/                  # Usage examples
+│   ├── basic_usage.go
+│   ├── bulk/main.go
+│   └── cache/main.go
+├── pkg/
+│   ├── cache/                 # Cache interface & memory implementation
+│   ├── install/               # Cross-platform auto-install
+│   ├── models/                # JSON data models (APIKey, MFAStatus, etc.)
+│   └── repository/            # Repository client
+│       ├── repository.go      # Core client & read interface
+│       ├── write_repository.go # Write operations & auth interface
+│       ├── mirrors.go         # Mirror & custom repository factories
+│       ├── options.go         # Client configuration
+│       ├── errors.go          # Typed API errors
+│       ├── retry.go           # Retry logic with backoff
+│       ├── bulk_operations.go # Concurrent batch operations
+│       └── cached_repository.go # Cache decorator
+├── tests/
+│   └── integration/           # Integration tests
+├── go.mod
+└── LICENSE
 ```
 
-## 单元测试
+---
 
-项目包含了全面的单元测试，覆盖了所有核心功能：
+## Rate Limits
 
-- **模型测试**: 测试了所有数据模型的JSON序列化和反序列化
-- **缓存测试**: 测试了缓存的存储、过期、清理和关闭等功能
-- **仓库测试**: 测试了仓库选项、重试机制和镜像源配置等
+RubyGems.org enforces API rate limits. See the [official documentation](https://guides.rubygems.org/rubygems-org-rate-limits/) for details. Using an API token increases your request quota significantly.
 
-运行测试：
+---
+
+## Testing
 
 ```bash
-# 运行所有测试
+# Run all unit tests (no network)
+go test -short -v ./...
+
+# Run all tests including live API tests
 go test -v ./...
 
-# 运行特定包的测试
-go test -v ./pkg/models/...
-go test -v ./pkg/cache/...
-go test -v ./pkg/repository/...
-
-# 运行带网络访问的测试（默认跳过）
-go test -v -run TestLiveAPI ./pkg/repository/...
+# Run with race detector
+go test -short -race -v ./...
 ```
 
-## API参考
+---
 
-详细的API文档请参考代码注释和[RubyGems API文档](https://guides.rubygems.org/rubygems-org-api-v2/)。
+## Contributing
 
-### 主要功能列表
+Contributions are welcome! Before submitting a PR, please ensure:
 
-#### Repository接口
+1. All tests pass: `go test -short -race ./...`
+2. No vet warnings: `go vet ./...`
+3. New code includes tests
+4. Code is formatted: `gofmt -s -w .`
+5. Documentation is updated
 
-- `GetPackage(ctx, gemName)`: 获取包详细信息
-- `Search(ctx, query, page)`: 搜索包
-- `GetGemVersions(ctx, gemName)`: 获取包的所有版本
-- `GetGemLatestVersion(ctx, gemName)`: 获取包的最新版本
-- `GetTimeFrameVersions(ctx, from, to)`: 获取特定时间段内的版本
-- `Downloads(ctx)`: 获取总下载统计
-- `VersionDownloads(ctx, gemName, gemVersion)`: 获取特定版本的下载统计
-- `GetDependencies(ctx, gemsNames...)`: 获取包的依赖
-- `LatestGems(ctx)`: 获取最新发布的包
-- `GetReverseDependencies(ctx, gemName)`: 获取依赖于特定包的所有包
+---
 
-#### Cache接口
+## License
 
-- `Get(key)`: 获取缓存值
-- `Set(key, value)`: 设置缓存值
-- `SetWithExpiration(key, value, duration)`: 设置带过期时间的缓存值
-- `Delete(key)`: 删除缓存项
-- `Clear()`: 清空缓存
-- `Count()`: 获取缓存项数量
-- `Close()`: 关闭缓存
+MIT — see [LICENSE](LICENSE) for details.
 
-## 贡献
+---
 
-欢迎提交PR和Issue！在提交PR前，请确保您的代码：
+## References
 
-1. 通过了所有测试（`go test ./...`）
-2. 添加了新功能的单元测试（如适用）
-3. 更新了文档（如适用）
-4. 符合项目的代码风格（使用`gofmt`格式化）
-
-## 开发计划
-
-- [ ] 添加更多镜像源支持
-- [ ] 提高测试覆盖率到90%+
-- [ ] 添加性能测试和基准测试
-- [ ] 添加内容下载功能
-- [ ] 实现分布式爬虫系统
-
-## 许可证
-
-MIT
-
-## 参考资料
-
-- [RubyGems API v2文档](https://guides.rubygems.org/rubygems-org-api-v2/)
-- [RubyGems API v1文档](https://guides.rubygems.org/rubygems-org-api/)
-- [RubyGems API速率限制](https://guides.rubygems.org/rubygems-org-rate-limits/)
+- [RubyGems API v2 Guide](https://guides.rubygems.org/rubygems-org-api-v2/)
+- [RubyGems API v1 Guide](https://guides.rubygems.org/rubygems-org-api/)
+- [RubyGems Rate Limits](https://guides.rubygems.org/rubygems-org-rate-limits/)

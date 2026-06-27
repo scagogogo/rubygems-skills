@@ -2,103 +2,91 @@ package repository
 
 import (
 	"context"
-	"errors"
-	"net/http"
+	"fmt"
 	"time"
 
 	"github.com/crawler-go-go-go/go-requests"
 )
 
 const (
-	// DefaultRetryAttempts 默认重试次数
+	// DefaultRetryAttempts default retry attempts
 	DefaultRetryAttempts = 3
 
-	// DefaultRetryWaitTime 默认重试等待时间
+	// DefaultRetryWaitTime default retry wait time
 	DefaultRetryWaitTime = 1 * time.Second
 
-	// DefaultRetryMaxWaitTime 默认最大重试等待时间
+	// DefaultRetryMaxWaitTime default max retry wait time
 	DefaultRetryMaxWaitTime = 30 * time.Second
 )
 
-// RetryOptions 重试选项
+// RetryOptions retry options
 type RetryOptions struct {
-	// 重试次数
+	// Retry count
 	MaxAttempts int
 
-	// 初始等待时间
+	// Initial wait time
 	WaitTime time.Duration
 
-	// 最大等待时间
+	// Max wait time
 	MaxWaitTime time.Duration
 
-	// 是否使用指数退避算法
+	// Whether to use exponential backoff
 	UseExponentialBackoff bool
 
-	// 自定义重试条件
-	ShouldRetry func(resp *http.Response, err error) bool
+	// Custom retry condition
+	// Note: Due to generic constraints, ShouldRetry can only determine whether to retry based on error.
+	// HTTP status code related retry logic is now handled by the custom ResponseHandler in the getBytes method,
+	// which returns errors for non-2xx status codes, thus triggering retries.
+	ShouldRetry func(err error) bool
 }
 
-// NewDefaultRetryOptions 创建默认重试选项
+// NewDefaultRetryOptions create default retry options
 func NewDefaultRetryOptions() *RetryOptions {
 	return &RetryOptions{
 		MaxAttempts:           DefaultRetryAttempts,
 		WaitTime:              DefaultRetryWaitTime,
 		MaxWaitTime:           DefaultRetryMaxWaitTime,
 		UseExponentialBackoff: true,
-		ShouldRetry: func(resp *http.Response, err error) bool {
-			// 如果有错误，总是重试
-			if err != nil {
-				return true
-			}
-
-			// 对于特定的HTTP状态码，进行重试
-			if resp != nil {
-				switch resp.StatusCode {
-				case http.StatusTooManyRequests, // 429
-					http.StatusInternalServerError, // 500
-					http.StatusBadGateway,          // 502
-					http.StatusServiceUnavailable,  // 503
-					http.StatusGatewayTimeout:      // 504
-					return true
-				}
-			}
-
-			return false
+		ShouldRetry: func(err error) bool {
+			// If there is an error, always retry
+			// HTTP status code errors (such as 429, 500, etc.) are now converted to errors by the
+			// custom ResponseHandler in getBytes, so they will trigger retries
+			return err != nil
 		},
 	}
 }
 
-// WithMaxAttempts 设置最大重试次数
+// WithMaxAttempts set max retry attempts
 func (o *RetryOptions) WithMaxAttempts(attempts int) *RetryOptions {
 	o.MaxAttempts = attempts
 	return o
 }
 
-// WithWaitTime 设置初始等待时间
+// WithWaitTime set initial wait time
 func (o *RetryOptions) WithWaitTime(waitTime time.Duration) *RetryOptions {
 	o.WaitTime = waitTime
 	return o
 }
 
-// WithMaxWaitTime 设置最大等待时间
+// WithMaxWaitTime set max wait time
 func (o *RetryOptions) WithMaxWaitTime(maxWaitTime time.Duration) *RetryOptions {
 	o.MaxWaitTime = maxWaitTime
 	return o
 }
 
-// WithExponentialBackoff 设置是否使用指数退避算法
+// WithExponentialBackoff set whether to use exponential backoff
 func (o *RetryOptions) WithExponentialBackoff(use bool) *RetryOptions {
 	o.UseExponentialBackoff = use
 	return o
 }
 
-// WithShouldRetry 设置自定义重试条件
-func (o *RetryOptions) WithShouldRetry(shouldRetry func(resp *http.Response, err error) bool) *RetryOptions {
+// WithShouldRetry set custom retry condition
+func (o *RetryOptions) WithShouldRetry(shouldRetry func(err error) bool) *RetryOptions {
 	o.ShouldRetry = shouldRetry
 	return o
 }
 
-// SendRequestWithRetry 发送带重试功能的请求
+// SendRequestWithRetry send request with retry
 func SendRequestWithRetry[Request any, Response any](
 	ctx context.Context,
 	options *requests.Options[Request, Response],
@@ -107,17 +95,17 @@ func SendRequestWithRetry[Request any, Response any](
 	var lastErr error
 	var lastResp Response
 
-	// 如果未提供重试选项，使用默认值
+	// If retry options not provided, use defaults
 	if retryOptions == nil {
 		retryOptions = NewDefaultRetryOptions()
 	}
 
 	for attempt := 0; attempt < retryOptions.MaxAttempts; attempt++ {
-		// 如果不是第一次尝试，等待一段时间
+		// If not first attempt, wait for a while
 		if attempt > 0 {
 			waitTime := retryOptions.WaitTime
 
-			// 如果使用指数退避，则指数增加等待时间
+			// If using exponential backoff, exponentially increase wait time
 			if retryOptions.UseExponentialBackoff {
 				factor := 1 << uint(attempt-1)
 				waitTime = time.Duration(float64(waitTime) * float64(factor))
@@ -126,42 +114,45 @@ func SendRequestWithRetry[Request any, Response any](
 				}
 			}
 
-			// 等待一段时间后重试
+			// Wait then retry
 			select {
 			case <-time.After(waitTime):
-				// 继续执行
+				// Continue execution
 			case <-ctx.Done():
-				// 上下文被取消，停止重试
+				// Context cancelled, stop retrying
 				var zero Response
 				return zero, ctx.Err()
 			}
 		}
 
-		// 执行请求
+		// Execute request
 		resp, err := requests.SendRequest[Request, Response](ctx, options)
 
-		// 检查是否需要重试
-		shouldRetry := false
+		// Save last result
 		if err != nil {
 			lastErr = err
-			shouldRetry = true
-		} else {
-			// 请求成功，返回结果
-			return resp, nil
 		}
-
-		// 如果不需要重试，直接返回结果
-		if !shouldRetry {
-			return resp, nil
-		}
-
-		// 记录最后一次响应
 		lastResp = resp
+
+		// Call user-provided retry condition function
+		// HTTP status code errors (such as 429, 500, etc.) are now converted to errors by the
+		// custom ResponseHandler in getBytes, so only need to check error here.
+		if retryOptions.ShouldRetry != nil && !retryOptions.ShouldRetry(err) {
+			// User custom ShouldRetry returns false, don't retry
+			return resp, err
+		}
+
+		// If no error (err == nil), request succeeded, return directly
+		if err == nil {
+			return resp, nil
+		}
+
+		// err != nil, continue retry loop
 	}
 
-	// 达到最大重试次数，返回最后一次的错误
+	// Max retry attempts reached, return last error
 	if lastErr != nil {
-		return lastResp, errors.New("max retry attempts reached: " + lastErr.Error())
+		return lastResp, fmt.Errorf("max retry attempts reached (%d attempts): %w", retryOptions.MaxAttempts, lastErr)
 	}
 
 	return lastResp, nil

@@ -30,7 +30,7 @@ func TestVersion_MarshalUnmarshal(t *testing.T) {
 		RubyVersion:     "3.2.2",
 		Prerelease:      false,
 		Licenses:        []string{"MIT"},
-		Requirements:    []interface{}{},
+		Requirements:    []string{},
 		Sha:             "abcdef1234567890",
 	}
 

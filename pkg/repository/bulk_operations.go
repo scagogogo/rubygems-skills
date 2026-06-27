@@ -4,33 +4,33 @@ import (
 	"context"
 	"sync"
 
-	"github.com/scagogogo/rubygems-crawler/pkg/models"
+	"github.com/scagogogo/rubygems-skills/pkg/models"
 )
 
-// BulkResult 表示批量操作的单个结果
-// 它包含请求的键（如包名）、返回的值和可能的错误
+// BulkResult represents single result of bulk operation
+// it contains the request key (such as package name), returned value and possible error
 type BulkResult[T any] struct {
-	Key   string // 请求的键，通常是gem包名
-	Value T      // 操作的结果值
-	Error error  // 操作过程中可能发生的错误
+	Key   string // Request key, usually gem name
+	Value T      // Operation result value
+	Error error  // Possible error during operation
 }
 
-// BulkOptions 定义批量操作的配置选项
+// BulkOptions defines bulk operation configuration options
 type BulkOptions struct {
-	// MaxConcurrency 定义最大并发请求数量
-	// 设置合理的值可以避免对API服务器造成过大压力
-	// 默认值为10
+	// MaxConcurrency defines max concurrent request count
+	// reasonable value avoids excessive pressure on API server
+	// default is 10
 	MaxConcurrency int
 
-	// ContinueOnError 决定在遇到错误时是否继续处理其他请求
-	// 如果为true，即使某些请求失败，仍会处理所有请求
-	// 如果为false，遇到第一个错误时会立即停止处理
-	// 默认为true
+	// ContinueOnError decides whether to continue other requests on error
+	// if true, continue on error even if some requests fail
+	// if false, stop on first error
+	// default is true
 	ContinueOnError bool
 }
 
-// NewBulkOptions 创建具有默认值的批量操作选项
-// 默认配置：最大并发数10，遇到错误时继续执行
+// NewBulkOptions create bulk options with defaults
+// default config: max concurrency 10, continue on error
 func NewBulkOptions() *BulkOptions {
 	return &BulkOptions{
 		MaxConcurrency:  10,
@@ -38,8 +38,8 @@ func NewBulkOptions() *BulkOptions {
 	}
 }
 
-// WithMaxConcurrency 设置最大并发请求数
-// 返回选项对象自身，支持链式调用
+// WithMaxConcurrency set max concurrent requests
+// return options object itself, supports chaining
 func (o *BulkOptions) WithMaxConcurrency(maxConcurrency int) *BulkOptions {
 	if maxConcurrency > 0 {
 		o.MaxConcurrency = maxConcurrency
@@ -47,22 +47,22 @@ func (o *BulkOptions) WithMaxConcurrency(maxConcurrency int) *BulkOptions {
 	return o
 }
 
-// WithContinueOnError 设置遇到错误时是否继续
-// 返回选项对象自身，支持链式调用
+// WithContinueOnError set whether to continue on error
+// return options object itself, supports chaining
 func (o *BulkOptions) WithContinueOnError(continueOnError bool) *BulkOptions {
 	o.ContinueOnError = continueOnError
 	return o
 }
 
-// BulkGetPackages 批量获取多个包的信息
-// 并发执行GetPackage请求，提高大规模数据获取效率
-// 参数:
-//   - ctx: 上下文，用于控制请求超时和取消
-//   - gemNames: 要获取的包名列表
-//   - options: 批量操作选项，控制并发数等
+// BulkGetPackages bulk get info of multiple packages
+// concurrent execution of GetPackage requests, improve large-scale data fetching efficiency
+// Parameters:
+//   - ctx: context for request timeout and cancellation
+//   - gemNames: list of package names to fetch
+//   - options: bulk options, controlling concurrency etc.
 //
-// 返回:
-//   - 包含每个包请求结果的切片，顺序与输入包名相同
+// Returns:
+//   - slice containing each package request result, same order as input package names
 func (r *RepositoryImpl) BulkGetPackages(ctx context.Context, gemNames []string, options *BulkOptions) []*BulkResult[*models.PackageInformation] {
 	if options == nil {
 		options = NewBulkOptions()
@@ -70,21 +70,21 @@ func (r *RepositoryImpl) BulkGetPackages(ctx context.Context, gemNames []string,
 
 	results := make([]*BulkResult[*models.PackageInformation], len(gemNames))
 
-	// 创建工作池
+	// Create worker pool
 	worker := func(wg *sync.WaitGroup, jobs <-chan int, results []*BulkResult[*models.PackageInformation]) {
 		defer wg.Done()
 
 		for i := range jobs {
 			select {
 			case <-ctx.Done():
-				// 上下文被取消，停止处理
+				// Context cancelled, stop processing
 				results[i] = &BulkResult[*models.PackageInformation]{
 					Key:   gemNames[i],
 					Error: ctx.Err(),
 				}
 				return
 			default:
-				// 获取包信息
+				// Get package info/versions/dependencies
 				pkg, err := r.GetPackage(ctx, gemNames[i])
 				results[i] = &BulkResult[*models.PackageInformation]{
 					Key:   gemNames[i],
@@ -92,7 +92,7 @@ func (r *RepositoryImpl) BulkGetPackages(ctx context.Context, gemNames []string,
 					Error: err,
 				}
 
-				// 如果设置了遇到错误停止，并且发生了错误
+				// If set to stop on error, and error occurred
 				if !options.ContinueOnError && err != nil {
 					return
 				}
@@ -100,21 +100,21 @@ func (r *RepositoryImpl) BulkGetPackages(ctx context.Context, gemNames []string,
 		}
 	}
 
-	// 运行工作池
+	// Run worker pool
 	runWorkerPool(options.MaxConcurrency, len(gemNames), results, worker)
 
 	return results
 }
 
-// BulkGetVersions 批量获取多个包的版本信息
-// 并发执行GetGemVersions请求，提高大规模数据获取效率
-// 参数:
-//   - ctx: 上下文，用于控制请求超时和取消
-//   - gemNames: 要获取的包名列表
-//   - options: 批量操作选项，控制并发数等
+// BulkGetVersions bulk get version info of multiple packages
+// concurrent execution of GetGemVersions requests, improve large-scale data fetching efficiency
+// Parameters:
+//   - ctx: context for request timeout and cancellation
+//   - gemNames: list of package names to fetch
+//   - options: bulk options, controlling concurrency etc.
 //
-// 返回:
-//   - 包含每个包版本请求结果的切片，顺序与输入包名相同
+// Returns:
+//   - slice containing each package version request result, same order as input package names
 func (r *RepositoryImpl) BulkGetVersions(ctx context.Context, gemNames []string, options *BulkOptions) []*BulkResult[[]*models.Version] {
 	if options == nil {
 		options = NewBulkOptions()
@@ -122,21 +122,21 @@ func (r *RepositoryImpl) BulkGetVersions(ctx context.Context, gemNames []string,
 
 	results := make([]*BulkResult[[]*models.Version], len(gemNames))
 
-	// 创建工作池
+	// Create worker pool
 	worker := func(wg *sync.WaitGroup, jobs <-chan int, results []*BulkResult[[]*models.Version]) {
 		defer wg.Done()
 
 		for i := range jobs {
 			select {
 			case <-ctx.Done():
-				// 上下文被取消，停止处理
+				// Context cancelled, stop processing
 				results[i] = &BulkResult[[]*models.Version]{
 					Key:   gemNames[i],
 					Error: ctx.Err(),
 				}
 				return
 			default:
-				// 获取版本信息
+				// Get version info
 				versions, err := r.GetGemVersions(ctx, gemNames[i])
 				results[i] = &BulkResult[[]*models.Version]{
 					Key:   gemNames[i],
@@ -144,7 +144,7 @@ func (r *RepositoryImpl) BulkGetVersions(ctx context.Context, gemNames []string,
 					Error: err,
 				}
 
-				// 如果设置了遇到错误停止，并且发生了错误
+				// If set to stop on error, and error occurred
 				if !options.ContinueOnError && err != nil {
 					return
 				}
@@ -152,21 +152,21 @@ func (r *RepositoryImpl) BulkGetVersions(ctx context.Context, gemNames []string,
 		}
 	}
 
-	// 运行工作池
+	// Run worker pool
 	runWorkerPool(options.MaxConcurrency, len(gemNames), results, worker)
 
 	return results
 }
 
-// BulkGetDependencies 批量获取多个包的依赖信息
-// 并发执行GetDependencies请求，提高大规模数据获取效率
-// 参数:
-//   - ctx: 上下文，用于控制请求超时和取消
-//   - gemNames: 要获取的包名列表
-//   - options: 批量操作选项，控制并发数等
+// BulkGetDependencies bulk get dependency info of multiple packages
+// concurrent execution of GetDependencies requests, improve large-scale data fetching efficiency
+// Parameters:
+//   - ctx: context for request timeout and cancellation
+//   - gemNames: list of package names to fetch
+//   - options: bulk options, controlling concurrency etc.
 //
-// 返回:
-//   - 包含每个包依赖请求结果的切片，顺序与输入包名相同
+// Returns:
+//   - slice containing each package dependency request result, same order as input package names
 func (r *RepositoryImpl) BulkGetDependencies(ctx context.Context, gemNames []string, options *BulkOptions) []*BulkResult[[]*models.DependencyInfo] {
 	if options == nil {
 		options = NewBulkOptions()
@@ -174,21 +174,21 @@ func (r *RepositoryImpl) BulkGetDependencies(ctx context.Context, gemNames []str
 
 	results := make([]*BulkResult[[]*models.DependencyInfo], len(gemNames))
 
-	// 创建工作池
+	// Create worker pool
 	worker := func(wg *sync.WaitGroup, jobs <-chan int, results []*BulkResult[[]*models.DependencyInfo]) {
 		defer wg.Done()
 
 		for i := range jobs {
 			select {
 			case <-ctx.Done():
-				// 上下文被取消，停止处理
+				// Context cancelled, stop processing
 				results[i] = &BulkResult[[]*models.DependencyInfo]{
 					Key:   gemNames[i],
 					Error: ctx.Err(),
 				}
 				return
 			default:
-				// 获取依赖信息
+				// Get dependency info
 				deps, err := r.GetDependencies(ctx, gemNames[i])
 				results[i] = &BulkResult[[]*models.DependencyInfo]{
 					Key:   gemNames[i],
@@ -196,7 +196,7 @@ func (r *RepositoryImpl) BulkGetDependencies(ctx context.Context, gemNames []str
 					Error: err,
 				}
 
-				// 如果设置了遇到错误停止，并且发生了错误
+				// If set to stop on error, and error occurred
 				if !options.ContinueOnError && err != nil {
 					return
 				}
@@ -204,21 +204,21 @@ func (r *RepositoryImpl) BulkGetDependencies(ctx context.Context, gemNames []str
 		}
 	}
 
-	// 运行工作池
+	// Run worker pool
 	runWorkerPool(options.MaxConcurrency, len(gemNames), results, worker)
 
 	return results
 }
 
-// BulkGetReverseDependencies 批量获取多个包的反向依赖信息
-// 并发执行GetReverseDependencies请求，提高大规模数据获取效率
-// 参数:
-//   - ctx: 上下文，用于控制请求超时和取消
-//   - gemNames: 要获取的包名列表
-//   - options: 批量操作选项，控制并发数等
+// BulkGetReverseDependencies bulk get reverse dependency info of multiple packages
+// concurrent execution of GetReverseDependencies requests, improve large-scale data fetching efficiency
+// Parameters:
+//   - ctx: context for request timeout and cancellation
+//   - gemNames: list of package names to fetch
+//   - options: bulk options, controlling concurrency etc.
 //
-// 返回:
-//   - 包含每个包反向依赖请求结果的切片，顺序与输入包名相同
+// Returns:
+//   - slice containing each package reverse dependency request result, same order as input package names
 func (r *RepositoryImpl) BulkGetReverseDependencies(ctx context.Context, gemNames []string, options *BulkOptions) []*BulkResult[[]string] {
 	if options == nil {
 		options = NewBulkOptions()
@@ -226,21 +226,21 @@ func (r *RepositoryImpl) BulkGetReverseDependencies(ctx context.Context, gemName
 
 	results := make([]*BulkResult[[]string], len(gemNames))
 
-	// 创建工作池
+	// Create worker pool
 	worker := func(wg *sync.WaitGroup, jobs <-chan int, results []*BulkResult[[]string]) {
 		defer wg.Done()
 
 		for i := range jobs {
 			select {
 			case <-ctx.Done():
-				// 上下文被取消，停止处理
+				// Context cancelled, stop processing
 				results[i] = &BulkResult[[]string]{
 					Key:   gemNames[i],
 					Error: ctx.Err(),
 				}
 				return
 			default:
-				// 获取反向依赖信息
+				// Get reverse dependency info
 				deps, err := r.GetReverseDependencies(ctx, gemNames[i])
 				results[i] = &BulkResult[[]string]{
 					Key:   gemNames[i],
@@ -248,7 +248,7 @@ func (r *RepositoryImpl) BulkGetReverseDependencies(ctx context.Context, gemName
 					Error: err,
 				}
 
-				// 如果设置了遇到错误停止，并且发生了错误
+				// If set to stop on error, and error occurred
 				if !options.ContinueOnError && err != nil {
 					return
 				}
@@ -256,40 +256,40 @@ func (r *RepositoryImpl) BulkGetReverseDependencies(ctx context.Context, gemName
 		}
 	}
 
-	// 运行工作池
+	// Run worker pool
 	runWorkerPool(options.MaxConcurrency, len(gemNames), results, worker)
 
 	return results
 }
 
-// runWorkerPool 是一个通用的工作池实现，用于并发处理任务
-// 参数:
-//   - numWorkers: 工作协程数量
-//   - numJobs: 总任务数量
-//   - results: 存储结果的切片
-//   - workerFunc: 工作函数，定义了每个工作协程的行为
+// runWorkerPool is a generic worker pool implementation for concurrent task processing
+// Parameters:
+//   - numWorkers: worker goroutine count
+//   - numJobs: total task count
+//   - results: slice for storing results
+//   - workerFunc: worker function, defines behavior of each worker goroutine
 func runWorkerPool[T any](numWorkers, numJobs int, results []*BulkResult[T], workerFunc func(*sync.WaitGroup, <-chan int, []*BulkResult[T])) {
-	// 确保工作协程数量不超过任务数量
+	// Ensure worker count doesn't exceed task count
 	if numWorkers > numJobs {
 		numWorkers = numJobs
 	}
 
-	// 创建工作组和任务通道
+	// Create wait group and job channel
 	var wg sync.WaitGroup
 	jobs := make(chan int, numJobs)
 
-	// 启动工作协程
+	// Start worker goroutines
 	wg.Add(numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		go workerFunc(&wg, jobs, results)
 	}
 
-	// 分发任务
+	// Dispatch jobs
 	for i := 0; i < numJobs; i++ {
 		jobs <- i
 	}
 	close(jobs)
 
-	// 等待所有工作协程完成
+	// Wait for all worker goroutines to finish
 	wg.Wait()
 }

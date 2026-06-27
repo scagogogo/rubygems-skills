@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 	"time"
 
@@ -39,35 +38,10 @@ func TestDefaultShouldRetry(t *testing.T) {
 	opts := NewDefaultRetryOptions()
 
 	// 有错误时应该重试
-	assert.True(t, opts.ShouldRetry(nil, errors.New("test error")))
+	assert.True(t, opts.ShouldRetry(errors.New("test error")))
 
-	// 对特定状态码应该重试
-	statusCodes := []int{
-		http.StatusTooManyRequests,     // 429
-		http.StatusInternalServerError, // 500
-		http.StatusBadGateway,          // 502
-		http.StatusServiceUnavailable,  // 503
-		http.StatusGatewayTimeout,      // 504
-	}
-
-	for _, code := range statusCodes {
-		resp := &http.Response{StatusCode: code}
-		assert.True(t, opts.ShouldRetry(resp, nil), "状态码 %d 应该触发重试", code)
-	}
-
-	// 对其他状态码不应该重试
-	otherCodes := []int{
-		http.StatusOK,           // 200
-		http.StatusBadRequest,   // 400
-		http.StatusUnauthorized, // 401
-		http.StatusForbidden,    // 403
-		http.StatusNotFound,     // 404
-	}
-
-	for _, code := range otherCodes {
-		resp := &http.Response{StatusCode: code}
-		assert.False(t, opts.ShouldRetry(resp, nil), "状态码 %d 不应该触发重试", code)
-	}
+	// 没有错误时不应该重试
+	assert.False(t, opts.ShouldRetry(nil))
 }
 
 // 模拟请求发送函数，用于测试重试逻辑

@@ -7,49 +7,49 @@ import (
 )
 
 var (
-	// ErrInvalidRequest 请求参数无效
+	// ErrInvalidRequest invalid request parameters
 	ErrInvalidRequest = errors.New("invalid request parameters")
 
-	// ErrNotFound 资源未找到
+	// ErrNotFound resource not found
 	ErrNotFound = errors.New("resource not found")
 
-	// ErrServerError 服务器错误
+	// ErrServerError server error
 	ErrServerError = errors.New("server error")
 
-	// ErrRateLimited 请求被限流
+	// ErrRateLimited request rate limited
 	ErrRateLimited = errors.New("request rate limited")
 
-	// ErrUnauthorized 未授权
+	// ErrUnauthorized unauthorized
 	ErrUnauthorized = errors.New("unauthorized")
 
-	// ErrTimeout 请求超时
+	// ErrTimeout request timeout
 	ErrTimeout = errors.New("request timeout")
 
-	// ErrNetworkFailure 网络故障
+	// ErrNetworkFailure network failure
 	ErrNetworkFailure = errors.New("network failure")
 )
 
-// APIError 表示API调用时遇到的错误
+// APIError represents error encountered during API call
 type APIError struct {
-	// 错误原因
+	// Error cause
 	Cause error
 
-	// HTTP状态码
+	// HTTP status code
 	StatusCode int
 
-	// 请求URL
+	// Request URL
 	URL string
 
-	// 响应内容
+	// Response content
 	Response string
 }
 
-// 实现Error接口
+// implement Error interface
 func (e *APIError) Error() string {
 	return fmt.Sprintf("API error (status: %d, url: %s): %v", e.StatusCode, e.URL, e.Cause)
 }
 
-// 从HTTP响应创建APIError
+// NewAPIError create APIError from HTTP response
 func NewAPIError(resp *http.Response, body []byte, cause error) *APIError {
 	return &APIError{
 		Cause:      cause,
@@ -59,7 +59,7 @@ func NewAPIError(resp *http.Response, body []byte, cause error) *APIError {
 	}
 }
 
-// IsNotFound 检查错误是否为资源未找到
+// IsNotFound check if error is resource not found
 func IsNotFound(err error) bool {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {
@@ -68,7 +68,7 @@ func IsNotFound(err error) bool {
 	return errors.Is(err, ErrNotFound)
 }
 
-// IsRateLimited 检查错误是否为请求被限流
+// IsRateLimited check if error is request rate limited
 func IsRateLimited(err error) bool {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {
@@ -77,7 +77,7 @@ func IsRateLimited(err error) bool {
 	return errors.Is(err, ErrRateLimited)
 }
 
-// IsUnauthorized 检查错误是否为未授权
+// IsUnauthorized check if error is unauthorized
 func IsUnauthorized(err error) bool {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {

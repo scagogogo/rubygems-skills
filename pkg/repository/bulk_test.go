@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/scagogogo/rubygems-crawler/pkg/models"
+	"github.com/scagogogo/rubygems-skills/pkg/models"
 )
 
 // 创建一个模拟的仓库实现用于测试
@@ -145,6 +145,46 @@ func (m *mockRepository) LatestGems(ctx context.Context) ([]*models.PackageInfor
 }
 
 func (m *mockRepository) GetReverseDependencies(ctx context.Context, gemName string) ([]string, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) SearchAutocomplete(ctx context.Context, query string) ([]string, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) GetGemVersionDetail(ctx context.Context, gemName, version string) (*models.VersionDetail, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) JustUpdatedGems(ctx context.Context) ([]*models.PackageInformation, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) TopDownloads(ctx context.Context) ([]*models.TopDownloadedGem, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) GetUserProfile(ctx context.Context, handleOrID string) (*models.UserProfile, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) GetOwnedGems(ctx context.Context) ([]*models.PackageInformation, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) GetGemsByOwner(ctx context.Context, handleOrID string) ([]*models.PackageInformation, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) GetGemOwners(ctx context.Context, gemName string) ([]*models.Owner, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) GetAttestations(ctx context.Context, gemName, version string) ([]*models.Attestation, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockRepository) GetGemVersionContents(ctx context.Context, gemName, version string) (*models.VersionContent, error) {
 	return nil, errors.New("not implemented")
 }
 

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/scagogogo/rubygems-crawler/pkg/cache"
-	"github.com/scagogogo/rubygems-crawler/pkg/repository"
+	"github.com/scagogogo/rubygems-skills/pkg/cache"
+	"github.com/scagogogo/rubygems-skills/pkg/repository"
 	"github.com/stretchr/testify/assert"
 )
 

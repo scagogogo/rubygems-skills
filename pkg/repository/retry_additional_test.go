@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"net/http"
+	"errors"
 	"testing"
 	"time"
 
@@ -18,28 +18,11 @@ func TestNewDefaultRetryOptions(t *testing.T) {
 	assert.True(t, options.UseExponentialBackoff)
 	assert.NotNil(t, options.ShouldRetry)
 
-	// Test the default shouldRetry function with nil response and error
-	assert.True(t, options.ShouldRetry(nil, assert.AnError))
+	// Test the default shouldRetry function: should retry when there's an error
+	assert.True(t, options.ShouldRetry(assert.AnError))
 
-	// Test the default shouldRetry function with various status codes
-	// Should retry on 429, 500, 502, 503, 504
-	statusCodes := map[int]bool{
-		http.StatusOK:                  false, // 200
-		http.StatusBadRequest:          false, // 400
-		http.StatusUnauthorized:        false, // 401
-		http.StatusForbidden:           false, // 403
-		http.StatusNotFound:            false, // 404
-		http.StatusTooManyRequests:     true,  // 429
-		http.StatusInternalServerError: true,  // 500
-		http.StatusBadGateway:          true,  // 502
-		http.StatusServiceUnavailable:  true,  // 503
-		http.StatusGatewayTimeout:      true,  // 504
-	}
-
-	for code, shouldRetry := range statusCodes {
-		resp := &http.Response{StatusCode: code}
-		assert.Equal(t, shouldRetry, options.ShouldRetry(resp, nil), "Status code %d should return %v", code, shouldRetry)
-	}
+	// Test the default shouldRetry function: should NOT retry when there's no error
+	assert.False(t, options.ShouldRetry(nil))
 }
 
 func TestRetryOptions_WithMaxAttempts(t *testing.T) {
@@ -95,15 +78,13 @@ func TestRetryOptions_WithExponentialBackoff(t *testing.T) {
 func TestRetryOptions_WithShouldRetry(t *testing.T) {
 	options := NewDefaultRetryOptions()
 
-	// Create a custom retry function that only retries on 500 errors
-	customShouldRetry := func(resp *http.Response, err error) bool {
-		if err != nil {
-			return true
+	// Create a custom retry function that only retries on specific errors
+	customShouldRetry := func(err error) bool {
+		if err == nil {
+			return false
 		}
-		if resp != nil && resp.StatusCode == http.StatusInternalServerError {
-			return true
-		}
-		return false
+		// Only retry on network-related errors, not on "not found" errors
+		return !errors.Is(err, ErrNotFound)
 	}
 
 	// Test fluent interface
@@ -111,8 +92,7 @@ func TestRetryOptions_WithShouldRetry(t *testing.T) {
 	assert.Same(t, options, result)
 
 	// Verify function was set by testing it
-	assert.True(t, options.ShouldRetry(nil, assert.AnError))
-	assert.True(t, options.ShouldRetry(&http.Response{StatusCode: http.StatusInternalServerError}, nil))
-	assert.False(t, options.ShouldRetry(&http.Response{StatusCode: http.StatusBadGateway}, nil))
-	assert.False(t, options.ShouldRetry(&http.Response{StatusCode: http.StatusServiceUnavailable}, nil))
+	assert.True(t, options.ShouldRetry(assert.AnError))
+	assert.False(t, options.ShouldRetry(nil))
+	assert.False(t, options.ShouldRetry(ErrNotFound))
 }

@@ -1,21 +1,21 @@
 package repository
 
-// DefaultServerURL 默认的仓库地址，直接连接到官方仓库
+// DefaultServerURL Default repository URL, connect directly to official repository
 const DefaultServerURL = "https://rubygems.org"
 
 type Options struct {
 
-	// 仓库的服务器地址
+	// Repository server URL
 	ServerURL string
 
-	// 向仓库发送请求时使用代理
+	// Use proxy when sending requests to repository
 	Proxy string
 
-	// 用于API认证的Token
-	// 参考: https://guides.rubygems.org/rubygems-org-api-v2/#rate-limits
+	// Token for API authentication
+	// See: https://guides.rubygems.org/rubygems-org-api-v2/#rate-limits
 	Token string
 
-	// 请求重试选项
+	// Request retry options
 	RetryOptions *RetryOptions
 }
 
@@ -48,7 +48,7 @@ func (x *Options) SetRetryOptions(retryOptions *RetryOptions) *Options {
 	return x
 }
 
-// DisableRetry 禁用重试功能
+// DisableRetry disable retry functionality
 func (x *Options) DisableRetry() *Options {
 	x.RetryOptions = nil
 	return x
