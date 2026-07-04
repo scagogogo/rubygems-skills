@@ -4,10 +4,180 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/scagogogo/rubygems-skills)](https://goreportcard.com/report/github.com/scagogogo/rubygems-skills)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D1.21-blue)](https://go.dev/)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://scagogogo.github.io/rubygems-skills/)
+
+> 📖 **文档站**: [https://scagogogo.github.io/rubygems-skills/](https://scagogogo.github.io/rubygems-skills/)
 
 [🇬🇧 English](README.md)
 
 一个面向 [RubyGems.org](https://rubygems.org) API 的生产级 Go SDK。提供完整的、类型安全的客户端，覆盖**全部公开 API v1 与 v2 端点**——包括包查询、搜索、版本、下载统计、依赖关系、用户/所有者管理、API Key 管理、MFA 状态、Webhook、签名认证和 Gem 发布——并内置缓存、并发批量操作、指数退避重试、镜像源支持和功能完整的命令行工具。
+
+> 本 README 以 **AI Agent** 为主要读者撰写。所有命令均可直接复制执行；每个代码块自包含；函数签名明确列出，Agent 无需试错即可生成正确代码。
+
+---
+
+## Agent 速览
+
+**这是什么：** 一个把整个 RubyGems.org HTTP API 封装为类型化 Go 接口的 Go module。
+
+**Module 路径：** `github.com/scagogogo/rubygems-skills`
+**最低 Go 版本：** 1.21
+**两个接口：** `Repository`（读，无需认证）和 `WriteRepository`（写，需要 API Token 或 HTTP Basic 认证）。
+
+**最快跑通路径：**
+
+```bash
+# 1. 添加到已存在的 Go module（在消费方 module 根目录执行）
+go get github.com/scagogogo/rubygems-skills@latest
+```
+
+```go
+// 2. 最小可运行程序 — 保存为 main.go 后 `go run main.go`
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/scagogogo/rubygems-skills/pkg/repository"
+)
+
+func main() {
+	pkg, err := repository.NewRepository().GetPackage(context.Background(), "rails")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%s %s — %d downloads\n", pkg.Name, pkg.Version, pkg.Downloads)
+}
+```
+
+**生成代码前预检：** 确认消费方 module 目标 Go ≥ 1.21，且能访问 `https://rubygems.org`。使用 SDK 本身不需要 Ruby/RubyGems 运行时——只有调用 `pkg/install` 自动安装器时才需要。
+
+---
+
+## Agent 快速参考
+
+### 信息表（机器可读）
+
+| 键 | 值 |
+|-----|-----|
+| module | `github.com/scagogogo/rubygems-skills` |
+| go 版本 | `1.21` |
+| 默认服务器 | `https://rubygems.org` |
+| 认证（读，可选） | 通过 `Options.SetToken` 传 Bearer token — 提升限流配额 |
+| 认证（写） | Bearer token（发布/撤回/所有者/webhook）**或** HTTP Basic（API key + profile 端点） |
+| 请求体编码 | `application/x-www-form-urlencoded`（非 JSON），适用于 API key 及写端点 |
+| 路径参数编码 | `url.PathEscape`（内部已应用） |
+| 查询参数编码 | `url.QueryEscape`（内部已应用） |
+| 重试 | 通过 `Options.SetRetryOptions` 开启；默认重试任意错误（3 次尝试，指数退避） |
+| 缓存 | 可选装饰器：`NewCachedRepository(repo, ttl, cache)` |
+
+### 构造函数签名（原文照抄）
+
+```go
+// 读客户端（无 options = 官方源、无认证、无重试、无缓存）
+func NewRepository(options ...*Options) *RepositoryImpl
+
+// 写客户端（需通过 options 传入 token）
+func NewWriteRepository(options *Options) *WriteRepositoryImpl
+
+// 缓存读客户端 — 包装任意 Repository
+func NewCachedRepository(repo Repository, ttl time.Duration, cache cache.Cache) *CachedRepository
+
+// 镜像源工厂（返回 *RepositoryImpl）
+func NewRubyChinaRepository() *RepositoryImpl      // https://gems.ruby-china.com
+func NewTSingHuaRepository() *RepositoryImpl       // https://mirrors.tuna.tsinghua.edu.cn/rubygems
+func NewAliYunRepository() *RepositoryImpl         // https://mirrors.aliyun.com/rubygems
+func NewCustomRepository(serverURL string) *RepositoryImpl  // 任意 gem 服务器
+
+// Options 构造器（链式，每个方法返回 *Options）
+func NewOptions() *Options
+func (o *Options) SetToken(token string) *Options
+func (o *Options) SetProxy(proxyURL string) *Options
+func (o *Options) SetRetryOptions(opts *RetryOptions) *Options
+
+// 重试构造器
+func NewDefaultRetryOptions() *RetryOptions
+func (r *RetryOptions) WithMaxAttempts(n int) *RetryOptions
+func (r *RetryOptions) WithWaitTime(d time.Duration) *RetryOptions
+func (r *RetryOptions) WithExponentialBackoff(b bool) *RetryOptions
+
+// 跨平台 Ruby/RubyGems 自动安装器
+func NewInstaller(options ...*InstallOptions) *Installer
+func (i *Installer) Install(ctx context.Context) (*InstallResult, error)
+func (i *Installer) IsInstalled() (bool, *RubyInfo, error)
+```
+
+### 错误判定（用这些，不要做字符串匹配）
+
+```go
+repository.IsNotFound(err)      // 404
+repository.IsRateLimited(err)   // 429
+repository.IsUnauthorized(err)  // 401/403
+
+var apiErr *repository.APIError
+errors.As(err, &apiErr)  // apiErr.StatusCode, apiErr.URL, apiErr.Response
+```
+
+---
+
+## 安装
+
+> 受众：将本 SDK 添加到 Go 项目的 AI Agent。步骤有序执行，前一步必须成功才能进行下一步。
+
+**第 1 步 — 校验消费方环境。** 目标 module 必须已是 Go ≥ 1.21 的 Go module。
+
+```bash
+# 在消费方 module 根目录执行。两条命令都必须成功。
+test -f go.mod                       # 确认存在 go.mod
+grep -q '^go 1\.\(2[1-9]\|[3-9]\)' go.mod  # 确认 Go >= 1.21
+```
+
+**第 2 步 — 添加依赖。**
+
+```bash
+go get github.com/scagogogo/rubygems-skills@latest
+```
+
+**第 3 步 — 验证编译**（立即捕获版本/Go 不匹配）：
+
+```bash
+go build ./...
+```
+
+**第 4 步 —（可选）在主机上自动安装 Ruby/RubyGems。** 仅当 Agent 的工作流本身要执行 `gem`/`ruby` 二进制时才需要——调用 SDK 不需要。
+
+```go
+import "github.com/scagogogo/rubygems-skills/pkg/install"
+
+func ensureRuby() error {
+	inst := install.NewInstaller()
+	if ok, _, _ := inst.IsInstalled(); ok {
+		return nil // 已安装
+	}
+	_, err := inst.Install(context.Background())
+	return err
+}
+```
+
+安装器自动检测操作系统和包管理器（apt/yum/dnf/apk/pacman/brew/choco/scoop/zypper），并在需要时使用 sudo 执行相应安装命令。可通过 options 自定义：
+
+```go
+opts := install.NewInstallOptions().
+	WithRubyVersion("3.2").
+	WithBundler(true).
+	WithTimeout(300)
+inst := install.NewInstaller(opts)
+```
+
+**第 5 步 —（可选）构建内置 CLI**，便于从 shell 临时查询：
+
+```bash
+go build -o rubygems-cli ./cmd/rubygems/
+./rubygems-cli -get -gem rails -json
+```
+
+---
 
 ## 为什么需要这个 SDK？
 
@@ -42,34 +212,9 @@ go get github.com/scagogogo/rubygems-skills
 
 ---
 
-## 快速开始
+## 用法配方
 
-### 基本用法
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-
-    "github.com/scagogogo/rubygems-skills/pkg/repository"
-)
-
-func main() {
-    repo := repository.NewRepository()
-
-    pkg, err := repo.GetPackage(context.Background(), "rails")
-    if err != nil {
-        panic(err)
-    }
-
-    fmt.Printf("Name: %s\n", pkg.Name)
-    fmt.Printf("Version: %s\n", pkg.Version)
-    fmt.Printf("Downloads: %d\n", pkg.Downloads)
-    fmt.Printf("Authors: %s\n", pkg.Authors)
-}
-```
+> 每个配方自包含。Agent 可将任意代码块直接复制进 `main.go`。
 
 ### 使用镜像源
 

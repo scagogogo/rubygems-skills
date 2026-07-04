@@ -4,10 +4,180 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/scagogogo/rubygems-skills)](https://goreportcard.com/report/github.com/scagogogo/rubygems-skills)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D1.21-blue)](https://go.dev/)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://scagogogo.github.io/rubygems-skills/)
 
-[🇨🇳 简体中文](README.zh-CN.md)
+> 📖 **Documentation**: [https://scagogogo.github.io/rubygems-skills/](https://scagogogo.github.io/rubygems-skills/)
+
+> 🇨🇳 [Simplified Chinese](README.zh-CN.md)
 
 A production-ready Go SDK for the [RubyGems.org](https://rubygems.org) API. It provides a complete, type-safe client that covers **all public API v1 and v2 endpoints** — including package queries, search, versions, downloads, dependencies, user/owner management, API key management, MFA status, webhooks, attestations, and gem publishing — with built-in caching, concurrent bulk operations, retry with exponential backoff, mirror repository support, and a full-featured CLI.
+
+> This README is written for **AI agents** as the primary reader. Every command is copy-paste-runnable; every code block is self-contained; signatures are stated explicitly so agents can generate correct code without trial-and-error.
+
+---
+
+## TL;DR for Agents
+
+**What this is:** A Go module that wraps the entire RubyGems.org HTTP API into typed Go interfaces.
+
+**Module path:** `github.com/scagogogo/rubygems-skills`
+**Min Go version:** 1.21
+**Two interfaces:** `Repository` (read, no auth needed) and `WriteRepository` (write, needs API token or HTTP Basic auth).
+
+**Fastest path to a working call:**
+
+```bash
+# 1. Add to a Go module that already exists (run inside the consumer module)
+go get github.com/scagogogo/rubygems-skills@latest
+```
+
+```go
+// 2. Minimal runnable program — save as main.go and `go run main.go`
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/scagogogo/rubygems-skills/pkg/repository"
+)
+
+func main() {
+	pkg, err := repository.NewRepository().GetPackage(context.Background(), "rails")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%s %s — %d downloads\n", pkg.Name, pkg.Version, pkg.Downloads)
+}
+```
+
+**Pre-check before generating code:** confirm the consumer module targets Go ≥ 1.21 and has network egress to `https://rubygems.org`. No Ruby/RubyGems runtime is required to use the SDK — only if you call the `pkg/install` auto-installer.
+
+---
+
+## Agent Quick Reference
+
+### Fact sheet (machine-readable)
+
+| Key | Value |
+|-----|-------|
+| module | `github.com/scagogogo/rubygems-skills` |
+| go version | `1.21` |
+| default server | `https://rubygems.org` |
+| auth (read, optional) | Bearer token via `Options.SetToken` — raises rate-limit quota |
+| auth (write) | Bearer token (publish/yank/owners/webhooks) **or** HTTP Basic (API key + profile endpoints) |
+| request body encoding | `application/x-www-form-urlencoded` (NOT JSON) for API key & write endpoints |
+| path param encoding | `url.PathEscape` (applied internally) |
+| query param encoding | `url.QueryEscape` (applied internally) |
+| retry | opt-in via `Options.SetRetryOptions`; default retries any error (3 attempts, exp backoff) |
+| caching | opt-in decorator: `NewCachedRepository(repo, ttl, cache)` |
+
+### Constructor signatures (verbatim)
+
+```go
+// Read client (no options = official source, no auth, no retry, no cache)
+func NewRepository(options ...*Options) *RepositoryImpl
+
+// Write client (requires a token via options)
+func NewWriteRepository(options *Options) *WriteRepositoryImpl
+
+// Cached read client — wraps any Repository
+func NewCachedRepository(repo Repository, ttl time.Duration, cache cache.Cache) *CachedRepository
+
+// Mirror factories (return *RepositoryImpl)
+func NewRubyChinaRepository() *RepositoryImpl      // https://gems.ruby-china.com
+func NewTSingHuaRepository() *RepositoryImpl       // https://mirrors.tuna.tsinghua.edu.cn/rubygems
+func NewAliYunRepository() *RepositoryImpl         // https://mirrors.aliyun.com/rubygems
+func NewCustomRepository(serverURL string) *RepositoryImpl  // any gem server
+
+// Options builder (chainable, each method returns *Options)
+func NewOptions() *Options
+func (o *Options) SetToken(token string) *Options
+func (o *Options) SetProxy(proxyURL string) *Options
+func (o *Options) SetRetryOptions(opts *RetryOptions) *Options
+
+// Retry builder
+func NewDefaultRetryOptions() *RetryOptions
+func (r *RetryOptions) WithMaxAttempts(n int) *RetryOptions
+func (r *RetryOptions) WithWaitTime(d time.Duration) *RetryOptions
+func (r *RetryOptions) WithExponentialBackoff(b bool) *RetryOptions
+
+// Cross-platform Ruby/RubyGems auto-installer
+func NewInstaller(options ...*InstallOptions) *Installer
+func (i *Installer) Install(ctx context.Context) (*InstallResult, error)
+func (i *Installer) IsInstalled() (bool, *RubyInfo, error)
+```
+
+### Error predicates (use these, not string matching)
+
+```go
+repository.IsNotFound(err)      // 404
+repository.IsRateLimited(err)   // 429
+repository.IsUnauthorized(err)  // 401/403
+
+var apiErr *repository.APIError
+errors.As(err, &apiErr)  // apiErr.StatusCode, apiErr.URL, apiErr.Response
+```
+
+---
+
+## Installation
+
+> Audience: an AI agent adding this SDK to a Go project. Steps are ordered; each must succeed before the next.
+
+**Step 1 — Verify the consumer environment.** The target module must already be a Go module with Go ≥ 1.21.
+
+```bash
+# Run inside the consumer module root. Both commands must succeed.
+test -f go.mod                       # ensure a go.mod exists
+grep -q '^go 1\.\(2[1-9]\|[3-9]\)' go.mod  # ensure Go >= 1.21
+```
+
+**Step 2 — Add the dependency.**
+
+```bash
+go get github.com/scagogogo/rubygems-skills@latest
+```
+
+**Step 3 — Verify it compiles** (catches version/Go mismatches immediately):
+
+```bash
+go build ./...
+```
+
+**Step 4 — (Optional) Auto-install Ruby/RubyGems on the host.** Only needed if the agent's workflow itself executes `gem`/`ruby` binaries — not needed to call the SDK.
+
+```go
+import "github.com/scagogogo/rubygems-skills/pkg/install"
+
+func ensureRuby() error {
+	inst := install.NewInstaller()
+	if ok, _, _ := inst.IsInstalled(); ok {
+		return nil // already present
+	}
+	_, err := inst.Install(context.Background())
+	return err
+}
+```
+
+The installer auto-detects OS and package manager (apt/yum/dnf/apk/pacman/brew/choco/scoop/zypper) and runs the appropriate install command with sudo where required. Pass options to customize:
+
+```go
+opts := install.NewInstallOptions().
+	WithRubyVersion("3.2").
+	WithBundler(true).
+	WithTimeout(300)
+inst := install.NewInstaller(opts)
+```
+
+**Step 5 — (Optional) Build the bundled CLI** for ad-hoc inspection from a shell:
+
+```bash
+go build -o rubygems-cli ./cmd/rubygems/
+./rubygems-cli -get -gem rails -json
+```
+
+---
 
 ## Why This SDK?
 
@@ -42,34 +212,9 @@ go get github.com/scagogogo/rubygems-skills
 
 ---
 
-## Quick Start
+## Usage Recipes
 
-### Basic Usage
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-
-    "github.com/scagogogo/rubygems-skills/pkg/repository"
-)
-
-func main() {
-    repo := repository.NewRepository()
-
-    pkg, err := repo.GetPackage(context.Background(), "rails")
-    if err != nil {
-        panic(err)
-    }
-
-    fmt.Printf("Name: %s\n", pkg.Name)
-    fmt.Printf("Version: %s\n", pkg.Version)
-    fmt.Printf("Downloads: %d\n", pkg.Downloads)
-    fmt.Printf("Authors: %s\n", pkg.Authors)
-}
-```
+> Each recipe is self-contained. An agent may copy any block directly into a `main.go`.
 
 ### Using Mirror Repositories
 
