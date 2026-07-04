@@ -7,17 +7,17 @@ import (
 )
 
 func TestMemoryCache(t *testing.T) {
-	// 创建一个缓存，过期时间100ms，清理间隔200ms
+	// Create a cache with 100ms expiration and 200ms cleanup interval
 	cache := NewMemoryCache(100*time.Millisecond, 200*time.Millisecond)
 	defer cache.Close()
 
-	// 测试Set和Get
+	// Test Set and Get
 	t.Run("Set and Get", func(t *testing.T) {
 		cache.Set("key1", "value1")
 		cache.Set("key2", 2)
 		cache.Set("key3", struct{ Name string }{"test"})
 
-		// 检查值是否正确
+		// Check that values are correct
 		if val, found := cache.Get("key1"); !found || val.(string) != "value1" {
 			t.Errorf("Expected key1=value1, got %v, found=%v", val, found)
 		}
@@ -30,13 +30,13 @@ func TestMemoryCache(t *testing.T) {
 			t.Errorf("Expected key3.Name=test, got %v, found=%v", val, found)
 		}
 
-		// 检查不存在的键
+		// Check non-existent key
 		if _, found := cache.Get("not_exists"); found {
 			t.Error("Expected not_exists to not be found")
 		}
 	})
 
-	// 测试Delete
+	// Test Delete
 	t.Run("Delete", func(t *testing.T) {
 		cache.Set("key_to_delete", "value")
 		if _, found := cache.Get("key_to_delete"); !found {
@@ -49,21 +49,21 @@ func TestMemoryCache(t *testing.T) {
 		}
 	})
 
-	// 测试过期
+	// Test expiration
 	t.Run("Expiration", func(t *testing.T) {
 		cache.SetWithExpiration("expire_key", "value", 50*time.Millisecond)
 		if _, found := cache.Get("expire_key"); !found {
 			t.Error("Expected expire_key to be found before expiration")
 		}
 
-		// 等待项过期
+		// Wait for the item to expire
 		time.Sleep(100 * time.Millisecond)
 		if _, found := cache.Get("expire_key"); found {
 			t.Error("Expected expire_key to not be found after expiration")
 		}
 	})
 
-	// 测试计数
+	// Test count
 	t.Run("Count", func(t *testing.T) {
 		cache.Clear()
 		cache.Set("key1", "value1")
@@ -88,7 +88,7 @@ func TestMemoryCache(t *testing.T) {
 		}
 	})
 
-	// 测试自动清理
+	// Test auto cleanup
 	t.Run("Auto Cleanup", func(t *testing.T) {
 		cleanupCache := NewMemoryCache(50*time.Millisecond, 100*time.Millisecond)
 		defer cleanupCache.Close()
@@ -96,7 +96,7 @@ func TestMemoryCache(t *testing.T) {
 		cleanupCache.Set("key1", "value1")
 		cleanupCache.Set("key2", "value2")
 
-		// 等待自动清理
+		// Wait for auto cleanup
 		time.Sleep(200 * time.Millisecond)
 
 		if _, found := cleanupCache.Get("key1"); found {
@@ -108,127 +108,127 @@ func TestMemoryCache(t *testing.T) {
 		}
 	})
 
-	// 测试永不过期的缓存项
+	// Test never-expiring cache items
 	t.Run("Never Expire", func(t *testing.T) {
 		cache.Clear()
 		cache.SetWithExpiration("never_expire", "value", -1)
 
-		// 等待正常过期时间
+		// Wait for the normal expiration time
 		time.Sleep(150 * time.Millisecond)
 
-		// 验证项目仍然存在
+		// Verify the item still exists
 		if val, found := cache.Get("never_expire"); !found || val.(string) != "value" {
 			t.Errorf("Expected never_expire to still exist with value='value', got %v, found=%v", val, found)
 		}
 	})
 
-	// 测试缓存覆盖
+	// Test cache override
 	t.Run("Cache Override", func(t *testing.T) {
 		cache.Clear()
 		cache.Set("override_key", "original")
 
-		// 验证原始值
+		// Verify the original value
 		if val, found := cache.Get("override_key"); !found || val.(string) != "original" {
 			t.Errorf("Expected override_key=original, got %v, found=%v", val, found)
 		}
 
-		// 覆盖值
+		// Override the value
 		cache.Set("override_key", "updated")
 
-		// 验证更新的值
+		// Verify the updated value
 		if val, found := cache.Get("override_key"); !found || val.(string) != "updated" {
 			t.Errorf("Expected override_key=updated, got %v, found=%v", val, found)
 		}
 	})
 }
 
-// 测试缓存创建时的默认值
+// Test default values when creating a cache
 func TestNewMemoryCache(t *testing.T) {
-	// 测试默认过期时间
+	// Test default expiration
 	t.Run("Default Expiration", func(t *testing.T) {
 		cache := NewMemoryCache(0, 0)
 		defer cache.Close()
 
-		// 默认过期时间应为1小时
+		// Default expiration should be 1 hour
 		cache.Set("key", "value")
 
-		// 应能正常获取值
+		// Should be able to get the value normally
 		if val, found := cache.Get("key"); !found || val.(string) != "value" {
 			t.Errorf("Expected key=value with default expiration, got %v, found=%v", val, found)
 		}
 	})
 
-	// 测试无清理间隔
+	// Test no cleanup interval
 	t.Run("No Cleanup Interval", func(t *testing.T) {
 		cache := NewMemoryCache(50*time.Millisecond, 0)
 		defer cache.Close()
 
 		cache.Set("key", "value")
 
-		// 等待项过期
+		// Wait for the item to expire
 		time.Sleep(100 * time.Millisecond)
 
-		// 尽管项已过期，但没有自动清理，Get仍然会检查过期时间
+		// Even though the item has expired, without auto cleanup, Get still checks the expiration time
 		if _, found := cache.Get("key"); found {
 			t.Error("Expected expired key to not be found even without cleanup")
 		}
 	})
 }
 
-// 测试多个并发清理
+// Test multiple concurrent cleanups
 func TestMultipleCleanupRoutines(t *testing.T) {
 	cache := NewMemoryCache(50*time.Millisecond, 20*time.Millisecond)
 
-	// 添加一些项
+	// Add some items
 	for i := 0; i < 5; i++ {
 		cache.Set(strconv.Itoa(i), i)
 	}
 
-	// 等待一段时间，让清理程序运行多次
+	// Wait for a while to let the cleanup routine run multiple times
 	time.Sleep(150 * time.Millisecond)
 
-	// 关闭缓存
+	// Close the cache
 	cache.Close()
 
-	// 在多次清理后所有项应该都过期并被删除
+	// After multiple cleanups, all items should be expired and deleted
 	if count := cache.Count(); count != 0 {
 		t.Errorf("Expected all items to be cleaned up, but found %d items", count)
 	}
 }
 
-// 测试关闭和重复关闭
+// Test close and repeated close
 func TestClose(t *testing.T) {
 	cache := NewMemoryCache(100*time.Millisecond, 200*time.Millisecond)
 	cache.Set("key", "value")
 
-	// 正常关闭
+	// Normal close
 	cache.Close()
 
-	// 验证仍然可以使用，但清理协程已停止
+	// Verify it can still be used, but the cleanup goroutine has stopped
 	cache.Set("key2", "value2")
 	val, found := cache.Get("key2")
 	if !found || val.(string) != "value2" {
 		t.Error("Cache should still be usable after close")
 	}
 
-	// 再次关闭不应导致问题
+	// Closing again should not cause issues
 	cache.Close()
 }
 
-// 测试缓存过期
+// Test cache expiration
 func TestExpiredItemRemoval(t *testing.T) {
 	cache := NewMemoryCache(50*time.Millisecond, 0)
 	defer cache.Close()
 
-	// 添加一些很快过期的项
+	// Add some items that expire soon
 	cache.Set("expire1", "value1")
 	cache.Set("expire2", "value2")
 	cache.SetWithExpiration("never_expire", "value3", -1)
 
-	// 等待一些项过期
+	// Wait for some items to expire
 	time.Sleep(100 * time.Millisecond)
 
-	// 验证过期的项已不可访问
+	// Verify that expired items are no longer accessible
 	if _, found := cache.Get("expire1"); found {
 		t.Error("Expected expire1 to be expired")
 	}
@@ -237,7 +237,7 @@ func TestExpiredItemRemoval(t *testing.T) {
 		t.Error("Expected expire2 to be expired")
 	}
 
-	// 验证永不过期的项仍然存在
+	// Verify the never-expiring item still exists
 	if val, found := cache.Get("never_expire"); !found || val.(string) != "value3" {
 		t.Errorf("Expected never_expire to still exist, got %v, found=%v", val, found)
 	}

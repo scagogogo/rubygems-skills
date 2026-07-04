@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// UserProfile 表示 RubyGems.org 用户/所有者的信息
+// UserProfile represents the info of a RubyGems.org user/owner
 // GET /api/v1/users/{handle}.json
 type UserProfile struct {
 	ID        int       `json:"id"`
@@ -15,7 +15,7 @@ type UserProfile struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Owner 表示 gem 包的所有者信息
+// Owner represents the owner info of a gem package
 // GET /api/v1/gems/{gem}/owners.json
 type Owner struct {
 	Handle    string `json:"handle"`
@@ -24,8 +24,8 @@ type Owner struct {
 	ID        int    `json:"id"`
 }
 
-// OwnerRole 表示所有者的角色（admin 或 owner）
+// OwnerRole represents the role of an owner (admin or owner)
 type OwnerRole struct {
 	Handle string `json:"handle"`
-	Role   string `json:"role"` // "admin" 或 "owner"
+	Role   string `json:"role"` // "admin" or "owner"
 }

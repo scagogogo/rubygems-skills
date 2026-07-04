@@ -9,76 +9,76 @@ import (
 )
 
 func main() {
-	// 创建一个5秒超时的上下文
+	// Create a context with a 5-second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 基本用法
+	// Basic usage
 	basicUsage(ctx)
 
-	// 使用镜像源
+	// Use mirror source
 	useMirror(ctx)
 
-	// 使用重试策略
+	// Use retry strategy
 	useRetry(ctx)
 
-	// 使用Token认证
+	// Use token authentication
 	useToken(ctx)
 
-	// 搜索包
+	// Search package
 	searchPackage(ctx)
 
-	// 获取包的版本列表
+	// Get package version list
 	getVersions(ctx)
 
-	// 获取下载统计
+	// Get download statistics
 	getDownloadStats(ctx)
 }
 
 func basicUsage(ctx context.Context) {
-	fmt.Println("=== 基本用法 ===")
+	fmt.Println("=== Basic Usage ===")
 	repo := repository.NewRepository()
 
 	pkg, err := repo.GetPackage(ctx, "rails")
 	if err != nil {
-		fmt.Printf("获取包信息失败: %v\n", err)
+		fmt.Printf("failed to get package info: %v\n", err)
 		return
 	}
 
-	fmt.Printf("包名: %s\n", pkg.Name)
-	fmt.Printf("版本: %s\n", pkg.Version)
-	fmt.Printf("作者: %s\n", pkg.Authors)
-	fmt.Printf("简介: %s\n", pkg.Info)
-	fmt.Printf("下载量: %d\n", pkg.Downloads)
-	fmt.Printf("主页: %s\n", pkg.HomepageURI)
+	fmt.Printf("package name: %s\n", pkg.Name)
+	fmt.Printf("version: %s\n", pkg.Version)
+	fmt.Printf("authors: %s\n", pkg.Authors)
+	fmt.Printf("summary: %s\n", pkg.Info)
+	fmt.Printf("downloads: %d\n", pkg.Downloads)
+	fmt.Printf("homepage: %s\n", pkg.HomepageURI)
 	fmt.Println()
 }
 
 func useMirror(ctx context.Context) {
-	fmt.Println("=== 使用镜像源 ===")
+	fmt.Println("=== Use Mirror Source ===")
 
-	// 使用Ruby中国镜像源
+	// Use Ruby China mirror source
 	repo := repository.NewRubyChinaRepository()
 
 	pkg, err := repo.GetPackage(ctx, "rails")
 	if err != nil {
-		fmt.Printf("获取包信息失败: %v\n", err)
+		fmt.Printf("failed to get package info: %v\n", err)
 		return
 	}
 
-	fmt.Printf("包名: %s\n", pkg.Name)
-	fmt.Printf("版本: %s\n", pkg.Version)
+	fmt.Printf("package name: %s\n", pkg.Name)
+	fmt.Printf("version: %s\n", pkg.Version)
 	fmt.Println()
 
-	// 也可以尝试其他镜像源
+	// You can also try other mirror sources
 	// repo = repository.NewTSingHuaRepository()
 	// repo = repository.NewAliYunRepository()
 }
 
 func useRetry(ctx context.Context) {
-	fmt.Println("=== 使用重试策略 ===")
+	fmt.Println("=== Use Retry Strategy ===")
 
-	// 自定义重试策略
+	// Custom retry strategy
 	retryOptions := repository.NewDefaultRetryOptions().
 		WithMaxAttempts(3).
 		WithWaitTime(1 * time.Second)
@@ -88,93 +88,93 @@ func useRetry(ctx context.Context) {
 
 	pkg, err := repo.GetPackage(ctx, "rails")
 	if err != nil {
-		fmt.Printf("获取包信息失败: %v\n", err)
+		fmt.Printf("failed to get package info: %v\n", err)
 		return
 	}
 
-	fmt.Printf("包名: %s\n", pkg.Name)
-	fmt.Printf("版本: %s\n", pkg.Version)
+	fmt.Printf("package name: %s\n", pkg.Name)
+	fmt.Printf("version: %s\n", pkg.Version)
 	fmt.Println()
 }
 
 func useToken(ctx context.Context) {
-	fmt.Println("=== 使用Token认证 ===")
+	fmt.Println("=== Use Token Authentication ===")
 
-	// 请替换为您的实际Token
+	// Please replace with your actual token
 	options := repository.NewOptions().SetToken("your-api-token")
 	repo := repository.NewRepository(options)
 
-	// 这里仅为示例，未使用实际Token
-	fmt.Println("注意: 请替换为您的实际Token")
-	fmt.Println("使用Token认证的Repository对象已创建: ", repo != nil)
+	// This is just an example, no actual token is used
+	fmt.Println("note: please replace with your actual token")
+	fmt.Println("Repository object with token authentication created: ", repo != nil)
 	fmt.Println()
 }
 
 func searchPackage(ctx context.Context) {
-	fmt.Println("=== 搜索包 ===")
+	fmt.Println("=== Search Package ===")
 	repo := repository.NewRepository()
 
-	// 搜索包含"rails"的包，第一页
+	// Search packages containing "rails", first page
 	packages, err := repo.Search(ctx, "rails", 1)
 	if err != nil {
-		fmt.Printf("搜索失败: %v\n", err)
+		fmt.Printf("search failed: %v\n", err)
 		return
 	}
 
-	fmt.Printf("找到 %d 个结果:\n", len(packages))
+	fmt.Printf("found %d results:\n", len(packages))
 	for i, pkg := range packages {
 		if i >= 5 {
-			fmt.Println("... 更多结果省略 ...")
+			fmt.Println("... more results omitted ...")
 			break
 		}
-		fmt.Printf("%d. %s (版本: %s, 下载量: %d)\n", i+1, pkg.Name, pkg.Version, pkg.Downloads)
+		fmt.Printf("%d. %s (version: %s, downloads: %d)\n", i+1, pkg.Name, pkg.Version, pkg.Downloads)
 	}
 	fmt.Println()
 }
 
 func getVersions(ctx context.Context) {
-	fmt.Println("=== 获取版本列表 ===")
+	fmt.Println("=== Get Version List ===")
 	repo := repository.NewRepository()
 
 	versions, err := repo.GetGemVersions(ctx, "rails")
 	if err != nil {
-		fmt.Printf("获取版本失败: %v\n", err)
+		fmt.Printf("failed to get versions: %v\n", err)
 		return
 	}
 
-	fmt.Printf("rails 共有 %d 个版本:\n", len(versions))
+	fmt.Printf("rails has %d versions:\n", len(versions))
 	for i, ver := range versions {
 		if i >= 5 {
-			fmt.Println("... 更多版本省略 ...")
+			fmt.Println("... more versions omitted ...")
 			break
 		}
-		fmt.Printf("%d. %s (下载量: %d, 发布时间: %s)\n",
+		fmt.Printf("%d. %s (downloads: %d, released: %s)\n",
 			i+1, ver.Number, ver.DownloadsCount, ver.CreatedAt.Format("2006-01-02"))
 	}
 	fmt.Println()
 }
 
 func getDownloadStats(ctx context.Context) {
-	fmt.Println("=== 下载统计 ===")
+	fmt.Println("=== Download Statistics ===")
 	repo := repository.NewRepository()
 
-	// 获取仓库总下载量
+	// Get repository total downloads
 	repoStats, err := repo.Downloads(ctx)
 	if err != nil {
-		fmt.Printf("获取下载统计失败: %v\n", err)
+		fmt.Printf("failed to get download statistics: %v\n", err)
 		return
 	}
 
-	fmt.Printf("RubyGems 仓库总下载量: %d\n", repoStats.TotalDownloads)
+	fmt.Printf("RubyGems repository total downloads: %d\n", repoStats.TotalDownloads)
 
-	// 获取特定版本下载量
+	// Get downloads for a specific version
 	verStats, err := repo.VersionDownloads(ctx, "rails", "7.0.5")
 	if err != nil {
-		fmt.Printf("获取版本下载统计失败: %v\n", err)
+		fmt.Printf("failed to get version download statistics: %v\n", err)
 		return
 	}
 
-	fmt.Printf("rails 7.0.5 版本下载量: %d\n", verStats.VersionDownloads)
-	fmt.Printf("rails 总下载量: %d\n", verStats.TotalDownloads)
+	fmt.Printf("rails 7.0.5 version downloads: %d\n", verStats.VersionDownloads)
+	fmt.Printf("rails total downloads: %d\n", verStats.TotalDownloads)
 	fmt.Println()
 }

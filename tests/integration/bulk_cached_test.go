@@ -10,19 +10,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// 测试仓库批量操作与缓存结合使用
+// Test repository bulk operations combined with cache
 func TestBulkOperationsWithCache(t *testing.T) {
-	// 创建一个较长超时的上下文
+	// Create a context with a longer timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// 创建内存缓存和仓库
+	// Create memory cache and repository
 	memCache := cache.NewMemoryCache(5*time.Minute, 30*time.Minute)
 	baseRepo := repository.NewRepository()
 	cachedRepo := repository.NewCachedRepository(baseRepo, 5*time.Minute, memCache)
 	defer cachedRepo.Close()
 
-	// 准备测试数据
+	// Prepare test data
 	gems := []string{
 		"rails",
 		"rack",
@@ -31,100 +31,100 @@ func TestBulkOperationsWithCache(t *testing.T) {
 		"nokogiri",
 	}
 
-	// 创建批量操作选项
+	// Create bulk operation options
 	options := repository.NewBulkOptions().WithMaxConcurrency(3)
 
-	// 测试先进行批量操作，然后从缓存获取
-	t.Run("批量操作后缓存获取", func(t *testing.T) {
-		// 清空缓存
+	// Test bulk operations first, then get from cache
+	t.Run("cache get after bulk operations", func(t *testing.T) {
+		// Clear cache
 		cachedRepo.ClearCache()
 
-		// 首次使用基础仓库批量获取
+		// First use base repository to bulk get
 		startTime := time.Now()
 		results1 := baseRepo.BulkGetPackages(ctx, gems, options)
 		duration1 := time.Since(startTime)
 
-		// 校验结果
-		assert.Equal(t, len(gems), len(results1), "结果数量应匹配请求数量")
+		// Verify results
+		assert.Equal(t, len(gems), len(results1), "result count should match request count")
 		for _, result := range results1 {
-			assert.NoError(t, result.Error, "获取包 %s 不应返回错误", result.Key)
-			assert.NotNil(t, result.Value, "获取包 %s 返回的包信息不应为nil", result.Key)
+			assert.NoError(t, result.Error, "getting package %s should not return error", result.Key)
+			assert.NotNil(t, result.Value, "package info returned for %s should not be nil", result.Key)
 
-			// 手动缓存结果
+			// Manually cache result
 			if result.Error == nil {
 				cacheKey := "package:" + result.Key
 				memCache.SetWithExpiration(cacheKey, result.Value, 5*time.Minute)
 			}
 		}
 
-		// 等待一会，确保不是网络波动导致的速度差异
+		// Wait a moment to ensure it is not network jitter causing the speed difference
 		time.Sleep(500 * time.Millisecond)
 
-		// 使用缓存仓库逐个获取
+		// Use cached repository to get one by one
 		startTime = time.Now()
 		for _, gemName := range gems {
 			pkg, err := cachedRepo.GetPackage(ctx, gemName)
-			assert.NoError(t, err, "从缓存获取包 %s 不应返回错误", gemName)
-			assert.NotNil(t, pkg, "从缓存获取包 %s 返回的包信息不应为nil", gemName)
+			assert.NoError(t, err, "getting package %s from cache should not return error", gemName)
+			assert.NotNil(t, pkg, "package info returned for %s from cache should not be nil", gemName)
 		}
 		duration2 := time.Since(startTime)
 
-		// 从缓存获取应该明显快于API获取
-		t.Logf("批量API获取耗时: %v, 缓存逐个获取耗时: %v", duration1, duration2)
-		assert.True(t, duration2 < duration1, "从缓存逐个获取应该快于API批量获取")
+		// Getting from cache should be significantly faster than API get
+		t.Logf("bulk API get duration: %v, cache get one by one duration: %v", duration1, duration2)
+		assert.True(t, duration2 < duration1, "getting one by one from cache should be faster than bulk API get")
 	})
 
-	// 测试缓存仓库与版本信息
-	t.Run("版本信息缓存", func(t *testing.T) {
-		// 清空缓存
+	// Test cached repository with version info
+	t.Run("version info cache", func(t *testing.T) {
+		// Clear cache
 		cachedRepo.ClearCache()
 
-		// 使用普通仓库获取数据
+		// Use normal repository to get data
 		startTime := time.Now()
 		results1 := baseRepo.BulkGetVersions(ctx, gems[:3], options)
 		duration1 := time.Since(startTime)
 
-		// 校验结果
-		assert.Equal(t, 3, len(results1), "结果数量应匹配请求数量")
+		// Verify results
+		assert.Equal(t, 3, len(results1), "result count should match request count")
 		for _, result := range results1 {
-			assert.NoError(t, result.Error, "获取包 %s 的版本不应返回错误", result.Key)
-			assert.NotNil(t, result.Value, "获取包 %s 返回的版本不应为nil", result.Key)
+			assert.NoError(t, result.Error, "getting versions for package %s should not return error", result.Key)
+			assert.NotNil(t, result.Value, "versions returned for %s should not be nil", result.Key)
 
-			// 手动缓存结果
+			// Manually cache result
 			if result.Error == nil {
 				cacheKey := "versions:" + result.Key
 				memCache.SetWithExpiration(cacheKey, result.Value, 5*time.Minute)
 			}
 		}
 
-		// 等待一会，确保不是网络波动导致的速度差异
+		// Wait a moment to ensure it is not network jitter causing the speed difference
 		time.Sleep(500 * time.Millisecond)
 
-		// 从缓存获取数据
+		// Get data from cache
 		startTime = time.Now()
 		for _, gemName := range gems[:3] {
 			versions, err := cachedRepo.GetGemVersions(ctx, gemName)
-			assert.NoError(t, err, "从缓存获取包 %s 的版本不应返回错误", gemName)
-			assert.NotNil(t, versions, "从缓存获取包 %s 返回的版本不应为nil", gemName)
+			assert.NoError(t, err, "getting versions for package %s from cache should not return error", gemName)
+			assert.NotNil(t, versions, "versions returned for %s from cache should not be nil", gemName)
 		}
 		duration2 := time.Since(startTime)
 
-		// 缓存应该更快
-		t.Logf("批量获取版本耗时: %v, 缓存获取版本耗时: %v", duration1, duration2)
-		assert.True(t, duration2 < duration1, "从缓存获取版本应该快于批量获取")
+		// Cache should be faster
+		t.Logf("bulk get versions duration: %v, cache get versions duration: %v", duration1, duration2)
+		assert.True(t, duration2 < duration1, "getting versions from cache should be faster than bulk get")
 	})
 
-	// 测试反向依赖获取和缓存
-	t.Run("反向依赖缓存", func(t *testing.T) {
-		// 清空缓存
+	// Test reverse dependency get and cache
+	t.Run("reverse dependency cache", func(t *testing.T) {
+		// Clear cache
 		cachedRepo.ClearCache()
 
-		// 批量获取反向依赖
+		// Bulk get reverse dependencies
 		startTime := time.Now()
 		results := baseRepo.BulkGetReverseDependencies(ctx, gems[:2], options)
 		duration1 := time.Since(startTime)
 
-		// 手动缓存结果
+		// Manually cache results
 		for _, result := range results {
 			if result.Error == nil {
 				cacheKey := "reverse_dependencies:" + result.Key
@@ -132,71 +132,71 @@ func TestBulkOperationsWithCache(t *testing.T) {
 			}
 		}
 
-		// 等待一会
+		// Wait a moment
 		time.Sleep(500 * time.Millisecond)
 
-		// 从缓存获取
+		// Get from cache
 		startTime = time.Now()
 		for _, gemName := range gems[:2] {
 			deps, err := cachedRepo.GetReverseDependencies(ctx, gemName)
-			assert.NoError(t, err, "从缓存获取包 %s 的反向依赖不应返回错误", gemName)
-			assert.NotNil(t, deps, "从缓存获取包 %s 返回的反向依赖不应为nil", gemName)
+			assert.NoError(t, err, "getting reverse dependencies for package %s from cache should not return error", gemName)
+			assert.NotNil(t, deps, "reverse dependencies returned for %s from cache should not be nil", gemName)
 		}
 		duration2 := time.Since(startTime)
 
-		// 缓存应该更快
-		t.Logf("批量获取反向依赖耗时: %v, 缓存获取反向依赖耗时: %v", duration1, duration2)
-		assert.True(t, duration2 < duration1, "从缓存获取反向依赖应该快于批量获取")
+		// Cache should be faster
+		t.Logf("bulk get reverse dependencies duration: %v, cache get reverse dependencies duration: %v", duration1, duration2)
+		assert.True(t, duration2 < duration1, "getting reverse dependencies from cache should be faster than bulk get")
 	})
 }
 
-// 测试同时使用缓存和批量查询
+// Test using cache and bulk query together
 func TestCacheStatsAndExpiration(t *testing.T) {
-	// 跳过长时间运行的测试
+	// Skip long running test
 	if testing.Short() {
-		t.Skip("在短模式下跳过缓存过期测试")
+		t.Skip("skip cache expiration test in short mode")
 	}
 
-	// 创建一个短缓存周期的缓存
+	// Create a cache with a short cache period
 	shortCache := cache.NewMemoryCache(2*time.Second, 1*time.Second)
 	baseRepo := repository.NewRepository()
 	cachedRepo := repository.NewCachedRepository(baseRepo, 2*time.Second, shortCache)
 	defer cachedRepo.Close()
 
-	// 创建上下文
+	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 测试数据
+	// Test data
 	gemName := "rails"
 
-	// 首次获取包信息，手动缓存
+	// First get package info, manually cache
 	pkg, err := baseRepo.GetPackage(ctx, gemName)
-	assert.NoError(t, err, "获取包信息不应返回错误")
-	assert.NotNil(t, pkg, "包信息不应为nil")
+	assert.NoError(t, err, "getting package info should not return error")
+	assert.NotNil(t, pkg, "package info should not be nil")
 
-	// 手动缓存
+	// Manually cache
 	cacheKey := "package:" + gemName
 	shortCache.SetWithExpiration(cacheKey, pkg, 2*time.Second)
 
-	// 验证缓存状态
+	// Verify cache status
 	cacheStats1 := cachedRepo.GetCacheStats()
-	assert.Equal(t, 1, cacheStats1, "缓存中应该有一个项目")
+	assert.Equal(t, 1, cacheStats1, "there should be one item in cache")
 
-	// 从缓存获取
+	// Get from cache
 	cachedPkg, err := cachedRepo.GetPackage(ctx, gemName)
-	assert.NoError(t, err, "从缓存获取包信息不应返回错误")
-	assert.Equal(t, pkg.Name, cachedPkg.Name, "缓存的包名应该与原始包名相同")
+	assert.NoError(t, err, "getting package info from cache should not return error")
+	assert.Equal(t, pkg.Name, cachedPkg.Name, "cached package name should be the same as original package name")
 
-	// 等待缓存过期
+	// Wait for cache to expire
 	time.Sleep(3 * time.Second)
 
-	// 缓存应该已经清除
+	// Cache should already be cleared
 	cacheStats2 := cachedRepo.GetCacheStats()
-	assert.Equal(t, 0, cacheStats2, "缓存应该为空")
+	assert.Equal(t, 0, cacheStats2, "cache should be empty")
 
-	// 再次获取，应该重新从API获取
+	// Get again, should re-fetch from API
 	pkg2, err := cachedRepo.GetPackage(ctx, gemName)
-	assert.NoError(t, err, "重新获取包信息不应返回错误")
-	assert.NotNil(t, pkg2, "包信息不应为nil")
+	assert.NoError(t, err, "re-getting package info should not return error")
+	assert.NotNil(t, pkg2, "package info should not be nil")
 }

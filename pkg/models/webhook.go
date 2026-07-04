@@ -1,21 +1,21 @@
 package models
 
-// Webhook 表示 RubyGems.org 上的 Webhook 配置
+// Webhook represents the Webhook configuration on RubyGems.org
 // GET /api/v1/web_hooks.json
 type Webhook struct {
-	// Webhook 回调 URL
+	// Webhook callback URL
 	URL string `json:"url"`
 
-	// 失败次数
+	// failure count
 	FailureCount int `json:"failure_count"`
 }
 
-// TopDownloadedGem 表示下载量排名前50的 gem 包
+// TopDownloadedGem represents a gem package in the top 50 by downloads
 // GET /api/v1/downloads/all.json
 type TopDownloadedGem struct {
-	// gem 包名
+	// gem package name
 	Name string `json:"name"`
 
-	// 总下载量
+	// total downloads
 	Downloads int `json:"downloads"`
 }

@@ -10,109 +10,109 @@ import (
 )
 
 func main() {
-	// 创建一个基础仓库
+	// create a base repository
 	baseRepo := repository.NewRepository()
 
-	// 创建一个内存缓存
+	// create a memory cache
 	memCache := cache.NewMemoryCache(5*time.Minute, 15*time.Minute)
 
-	// 创建一个带缓存的仓库，缓存时间为5分钟
+	// create a cached repository, cache time is 5 minutes
 	cachedRepo := repository.NewCachedRepository(baseRepo, 5*time.Minute, memCache)
 
-	// 创建一个上下文
+	// create a context
 	ctx := context.Background()
 
-	// 首次查询，会从API获取数据
-	fmt.Println("===== 首次查询 (从API获取) =====")
+	// first query, fetches from API
+	fmt.Println("===== first query (from API) =====")
 	start := time.Now()
 	pkg, err := cachedRepo.GetPackage(ctx, "rails")
 	if err != nil {
-		fmt.Printf("获取包信息失败: %v\n", err)
+		fmt.Printf("failed to get package info: %v\n", err)
 		return
 	}
-	fmt.Printf("查询耗时: %v\n", time.Since(start))
-	fmt.Printf("包名: %s\n", pkg.Name)
-	fmt.Printf("版本: %s\n", pkg.Version)
-	fmt.Printf("缓存项数量: %d\n", cachedRepo.GetCacheStats())
+	fmt.Printf("query elapsed: %v\n", time.Since(start))
+	fmt.Printf("package name: %s\n", pkg.Name)
+	fmt.Printf("version: %s\n", pkg.Version)
+	fmt.Printf("cache count: %d\n", cachedRepo.GetCacheStats())
 
-	// 再次查询相同的包，会从缓存获取
-	fmt.Println("\n===== 再次查询 (从缓存获取) =====")
+	// query same package again, fetches from cache
+	fmt.Println("\n===== query again (from cache) =====")
 	start = time.Now()
 	pkg, err = cachedRepo.GetPackage(ctx, "rails")
 	if err != nil {
-		fmt.Printf("获取包信息失败: %v\n", err)
+		fmt.Printf("failed to get package info: %v\n", err)
 		return
 	}
-	fmt.Printf("查询耗时: %v\n", time.Since(start))
-	fmt.Printf("包名: %s\n", pkg.Name)
-	fmt.Printf("版本: %s\n", pkg.Version)
-	fmt.Printf("缓存项数量: %d\n", cachedRepo.GetCacheStats())
+	fmt.Printf("query elapsed: %v\n", time.Since(start))
+	fmt.Printf("package name: %s\n", pkg.Name)
+	fmt.Printf("version: %s\n", pkg.Version)
+	fmt.Printf("cache count: %d\n", cachedRepo.GetCacheStats())
 
-	// 查询另一个包，会从API获取
-	fmt.Println("\n===== 查询另一个包 (从API获取) =====")
+	// query another package, fetches from API
+	fmt.Println("\n===== query another package (from API) =====")
 	start = time.Now()
 	pkg, err = cachedRepo.GetPackage(ctx, "rake")
 	if err != nil {
-		fmt.Printf("获取包信息失败: %v\n", err)
+		fmt.Printf("failed to get package info: %v\n", err)
 		return
 	}
-	fmt.Printf("查询耗时: %v\n", time.Since(start))
-	fmt.Printf("包名: %s\n", pkg.Name)
-	fmt.Printf("版本: %s\n", pkg.Version)
-	fmt.Printf("缓存项数量: %d\n", cachedRepo.GetCacheStats())
+	fmt.Printf("query elapsed: %v\n", time.Since(start))
+	fmt.Printf("package name: %s\n", pkg.Name)
+	fmt.Printf("version: %s\n", pkg.Version)
+	fmt.Printf("cache count: %d\n", cachedRepo.GetCacheStats())
 
-	// 使用自定义缓存
-	fmt.Println("\n===== 使用自定义缓存 =====")
+	// use custom cache
+	fmt.Println("\n===== use custom cache =====")
 	customCache := cache.NewMemoryCache(10*time.Minute, 30*time.Minute)
 	customCachedRepo := repository.NewCachedRepository(baseRepo, 10*time.Minute, customCache)
 
 	pkg, err = customCachedRepo.GetPackage(ctx, "rails")
 	if err != nil {
-		fmt.Printf("获取包信息失败: %v\n", err)
+		fmt.Printf("failed to get package info: %v\n", err)
 		return
 	}
-	fmt.Printf("包名: %s\n", pkg.Name)
-	fmt.Printf("版本: %s\n", pkg.Version)
-	fmt.Printf("缓存项数量: %d\n", customCachedRepo.GetCacheStats())
+	fmt.Printf("package name: %s\n", pkg.Name)
+	fmt.Printf("version: %s\n", pkg.Version)
+	fmt.Printf("cache count: %d\n", customCachedRepo.GetCacheStats())
 
-	// 清空缓存
-	fmt.Println("\n===== 清空缓存 =====")
+	// clear cache
+	fmt.Println("\n===== clear cache =====")
 	cachedRepo.ClearCache()
-	fmt.Printf("清空后缓存项数量: %d\n", cachedRepo.GetCacheStats())
+	fmt.Printf("cache count after clear: %d\n", cachedRepo.GetCacheStats())
 
-	// 关闭缓存
-	fmt.Println("\n===== 关闭缓存 =====")
+	// close cache
+	fmt.Println("\n===== close cache =====")
 	cachedRepo.Close()
 	customCachedRepo.Close()
 
 	/*
-		示例输出：
-		===== 首次查询 (从API获取) =====
-		查询耗时: 1.234567s
-		包名: rails
-		版本: 7.0.5
-		缓存项数量: 1
+		example output:
+		===== first query (from API) =====
+		query elapsed: 1.234567s
+		package name: rails
+		version: 7.0.5
+		cache count: 1
 
-		===== 再次查询 (从缓存获取) =====
-		查询耗时: 123µs
-		包名: rails
-		版本: 7.0.5
-		缓存项数量: 1
+		===== query again (from cache) =====
+		query elapsed: 123µs
+		package name: rails
+		version: 7.0.5
+		cache count: 1
 
-		===== 查询另一个包 (从API获取) =====
-		查询耗时: 987.654ms
-		包名: rake
-		版本: 13.0.6
-		缓存项数量: 2
+		===== query another package (from API) =====
+		query elapsed: 987.654ms
+		package name: rake
+		version: 13.0.6
+		cache count: 2
 
-		===== 使用自定义缓存 =====
-		包名: rails
-		版本: 7.0.5
-		缓存项数量: 1
+		===== use custom cache =====
+		package name: rails
+		version: 7.0.5
+		cache count: 1
 
-		===== 清空缓存 =====
-		清空后缓存项数量: 0
+		===== clear cache =====
+		cache count after clear: 0
 
-		===== 关闭缓存 =====
+		===== close cache =====
 	*/
 }

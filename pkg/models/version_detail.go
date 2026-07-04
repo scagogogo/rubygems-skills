@@ -2,9 +2,9 @@ package models
 
 import "time"
 
-// VersionDetail 是 API v2 端点返回的详细版本信息
+// VersionDetail is the detailed version info returned by the API v2 endpoint
 // GET /api/v2/rubygems/{gem}/versions/{version}.json
-// 比V1的Version结构体包含更多字段（spec_sha, yanked, 完整依赖信息等）
+// contains more fields than the V1 Version struct (spec_sha, yanked, full dependency info, etc.)
 type VersionDetail struct {
 	Authors         string       `json:"authors"`
 	BuiltAt         time.Time    `json:"built_at"`
@@ -26,16 +26,16 @@ type VersionDetail struct {
 	Dependencies    Dependencies `json:"dependencies"`
 }
 
-// VersionContent 表示 gem 版本的文件校验和/清单内容
+// VersionContent represents the file checksum/manifest content of a gem version
 // GET /api/v2/rubygems/{gem}/versions/{version}/contents.json
 type VersionContent struct {
-	// 文件路径到SHA256校验和的映射
+	// mapping from file path to SHA256 checksum
 	Files map[string]string `json:"files"`
 }
 
-// Attestation 表示 gem 版本的 sigstore 证明
+// Attestation represents the sigstore attestation of a gem version
 // GET /api/v1/attestations/{gem}-{version}.json
 type Attestation struct {
-	// 证明主体内容
+	// attestation body content
 	Body string `json:"body"`
 }

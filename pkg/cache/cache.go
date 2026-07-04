@@ -1,5 +1,5 @@
-// Package cache 提供了缓存接口和实现
-// 用于存储和检索键值对数据，支持过期时间和自动清理
+// Package cache provides cache interface and implementation
+// for storing and retrieving key-value data, supports expiration and auto-cleanup
 package cache
 
 import (
@@ -7,62 +7,62 @@ import (
 	"time"
 )
 
-// Cache 定义了缓存的基本操作接口
-// 该接口允许存储任意类型的值，并支持过期时间设置
+// Cache defines the basic operations interface for cache
+// this interface allows storing any type of value and supports expiration
 type Cache interface {
-	// Get 获取指定键的缓存值
-	// 如果键存在且未过期，返回值和true
-	// 如果键不存在或已过期，返回nil和false
+	// Get get cached value for specified key
+	// if key exists and not expired, return value and true
+	// if key doesn't exist or expired, return nil and false
 	Get(key string) (interface{}, bool)
 
-	// Set 设置缓存值
-	// 使用默认的过期时间
+	// Set set cache value
+	// use default expiration
 	Set(key string, value interface{})
 
-	// SetWithExpiration 设置缓存值并指定过期时间
-	// 如果过期时间为0，则使用默认过期时间
-	// 如果过期时间为负，则永不过期
+	// SetWithExpiration set cache value with specified expiration
+	// if expiration is 0, use default
+	// if negative, never expire
 	SetWithExpiration(key string, value interface{}, d time.Duration)
 
-	// Delete 删除指定键的缓存
+	// Delete delete cache for specified key
 	Delete(key string)
 
-	// Clear 清空所有缓存
+	// Clear clear all cache
 	Clear()
 
-	// Count 返回缓存中的项目数量
+	// Count return item count in cache
 	Count() int
 
-	// Close 关闭缓存，释放资源
-	// 在不再使用缓存时应调用此方法
+	// Close close cache, release resources
+	// should be called when cache is no longer used
 	Close()
 }
 
-// cacheItem 表示一个缓存项
+// cacheItem represents a cache item
 type cacheItem struct {
-	value      interface{} // 存储的值
-	expiration time.Time   // 过期时间
-	created    time.Time   // 创建时间
+	value      interface{} // stored value
+	expiration time.Time   // expiration
+	created    time.Time   // created
 }
 
-// MemoryCache 是Cache接口的内存实现
-// 它将数据存储在内存中，并支持自动过期和定期清理
+// MemoryCache is the memory implementation of Cache interface
+// stores data in memory, supports auto-expiration and periodic cleanup
 type MemoryCache struct {
-	defaultExpiration time.Duration        // 默认过期时间
-	cleanupInterval   time.Duration        // 清理周期
-	items             map[string]cacheItem // 缓存项存储
-	mu                sync.RWMutex         // 读写锁，保证并发安全
-	stopCleanup       chan struct{}        // 停止清理的通道
-	closed            bool                 // 缓存是否已关闭
+	defaultExpiration time.Duration        // default expiration
+	cleanupInterval   time.Duration        // cleanup interval
+	items             map[string]cacheItem // cache item storage
+	mu                sync.RWMutex         // read-write lock for concurrency safety
+	stopCleanup       chan struct{}        // stop cleanup channel
+	closed            bool                 // whether cache is closed
 }
 
-// NewMemoryCache 创建一个新的内存缓存
-// 参数:
-//   - defaultExpiration: 默认的缓存项过期时间
-//   - cleanupInterval: 自动清理过期项目的时间间隔
+// NewMemoryCache create a new memory cache
+// Parameters:
+//   - defaultExpiration: default cache item expiration
+//   - cleanupInterval: auto-cleanup interval for expired items
 //
-// 如果cleanupInterval为0，则不会自动清理过期项目
-// 如果defaultExpiration为0，则使用1小时作为默认过期时间
+// if cleanupInterval is 0, no auto-cleanup
+// if defaultExpiration is 0, use 1 hour as default
 func NewMemoryCache(defaultExpiration, cleanupInterval time.Duration) *MemoryCache {
 	if defaultExpiration <= 0 {
 		defaultExpiration = time.Hour
@@ -75,7 +75,7 @@ func NewMemoryCache(defaultExpiration, cleanupInterval time.Duration) *MemoryCac
 		stopCleanup:       make(chan struct{}),
 	}
 
-	// 如果设置了清理间隔，启动自动清理
+	// if cleanup interval set, start auto-cleanup
 	if cleanupInterval > 0 {
 		go cache.startCleanupTimer()
 	}
@@ -83,8 +83,8 @@ func NewMemoryCache(defaultExpiration, cleanupInterval time.Duration) *MemoryCac
 	return cache
 }
 
-// Get 获取缓存值
-// 如果键不存在或已过期，返回nil和false
+// Get get cached value
+// if key doesn't exist or expired, return nil and false
 func (c *MemoryCache) Get(key string) (interface{}, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -94,7 +94,7 @@ func (c *MemoryCache) Get(key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	// 检查是否已过期
+	// check if expired
 	if !item.expiration.IsZero() && item.expiration.Before(time.Now()) {
 		return nil, false
 	}
@@ -102,14 +102,14 @@ func (c *MemoryCache) Get(key string) (interface{}, bool) {
 	return item.value, true
 }
 
-// Set 使用默认过期时间设置缓存值
+// Set set cache value with default expiration
 func (c *MemoryCache) Set(key string, value interface{}) {
 	c.SetWithExpiration(key, value, c.defaultExpiration)
 }
 
-// SetWithExpiration 设置缓存值并指定过期时间
-// 如果d为0，使用默认过期时间
-// 如果d为负数，则永不过期
+// SetWithExpiration set cache value with specified expiration
+// if d is 0, use default expiration
+// if d is negative, never expire
 func (c *MemoryCache) SetWithExpiration(key string, value interface{}, d time.Duration) {
 	var expiration time.Time
 
@@ -117,7 +117,7 @@ func (c *MemoryCache) SetWithExpiration(key string, value interface{}, d time.Du
 		d = c.defaultExpiration
 	}
 
-	// 如果持续时间为负，则永不过期
+	// if duration is negative, never expire
 	if d > 0 {
 		expiration = time.Now().Add(d)
 	}
@@ -132,7 +132,7 @@ func (c *MemoryCache) SetWithExpiration(key string, value interface{}, d time.Du
 	}
 }
 
-// Delete 从缓存中删除指定键
+// Delete delete specified key from cache
 func (c *MemoryCache) Delete(key string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -140,7 +140,7 @@ func (c *MemoryCache) Delete(key string) {
 	delete(c.items, key)
 }
 
-// Clear 清空所有缓存项
+// Clear clear all cache items
 func (c *MemoryCache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -148,7 +148,7 @@ func (c *MemoryCache) Clear() {
 	c.items = make(map[string]cacheItem)
 }
 
-// Count 返回缓存中的项目数量
+// Count return item count in cache
 func (c *MemoryCache) Count() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -156,7 +156,7 @@ func (c *MemoryCache) Count() int {
 	return len(c.items)
 }
 
-// Close 关闭缓存，停止自动清理
+// Close close cache, stop auto-cleanup
 func (c *MemoryCache) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -167,7 +167,7 @@ func (c *MemoryCache) Close() {
 	}
 }
 
-// startCleanupTimer 启动定期清理过期项目的定时器
+// startCleanupTimer start timer for periodic cleanup of expired items
 func (c *MemoryCache) startCleanupTimer() {
 	ticker := time.NewTicker(c.cleanupInterval)
 	defer ticker.Stop()
@@ -182,7 +182,7 @@ func (c *MemoryCache) startCleanupTimer() {
 	}
 }
 
-// deleteExpired 删除所有过期的缓存项
+// deleteExpired delete all expired cache items
 func (c *MemoryCache) deleteExpired() {
 	now := time.Now()
 
@@ -190,7 +190,7 @@ func (c *MemoryCache) deleteExpired() {
 	defer c.mu.Unlock()
 
 	for k, item := range c.items {
-		// 如果设置了过期时间且已过期，则删除
+		// if expiration set and expired, delete
 		if !item.expiration.IsZero() && item.expiration.Before(now) {
 			delete(c.items, k)
 		}

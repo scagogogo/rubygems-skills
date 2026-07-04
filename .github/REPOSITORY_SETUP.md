@@ -5,7 +5,7 @@ This file documents the recommended GitHub repository settings.
 ## Description (short, one-line)
 
 ```
-Production-ready Go SDK for the RubyGems.org API with caching, retry, bulk operations, multi-mirror support, and CLI tool. 生产级 RubyGems.org API Go SDK。
+Production-ready Go SDK for the RubyGems.org API with caching, retry, bulk operations, multi-mirror support, and CLI tool.
 ```
 
 ## Topics (tags)
@@ -39,7 +39,7 @@ Run the following commands (requires `gh` CLI and admin permissions):
 
 ```bash
 # Set repository description
-gh repo edit --description "Production-ready Go SDK for the RubyGems.org API with caching, retry, bulk operations, multi-mirror support, and CLI tool. 生产级 RubyGems.org API Go SDK。"
+gh repo edit --description "Production-ready Go SDK for the RubyGems.org API with caching, retry, bulk operations, multi-mirror support, and CLI tool."
 
 # Set repository topics
 gh repo edit --add-topic rubygems,rubygems-api,golang,go-sdk,ruby-gems,api-client,gem,rubygems-client,crawler,mirror,cache,cli,concurrent,batch-operations,ruby-china,private-gem-server

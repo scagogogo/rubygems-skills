@@ -1,1 +1,18 @@
-.idearubygems
+# IDE
+.idea/
+.vscode/
+
+# Compiled binaries
+rubygems
+rubygems-cli
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Node modules (website)
+website/node_modules/
+
+# VitePress build output
+website/.vitepress/dist/
+website/.vitepress/cache/

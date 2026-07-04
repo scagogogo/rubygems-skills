@@ -10,122 +10,122 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// CLI 集成测试需要构建二进制文件，所以这里采用调用外部命令的方式
+// CLI integration test requires building the binary, so here we use calling external commands
 func TestCLI(t *testing.T) {
-	// 跳过长时间运行的测试
+	// Skip long running test
 	if testing.Short() {
-		t.Skip("在短模式下跳过CLI测试")
+		t.Skip("skip CLI test in short mode")
 	}
 
-	// 尝试获取编译后的二进制文件路径
+	// Try to get the compiled binary file path
 	cmd := exec.Command("go", "build", "-o", "rubygems-cli", "../../cmd/rubygems/main.go")
 	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("编译CLI失败: %v", err)
+		t.Fatalf("compile CLI failed: %v", err)
 	}
 
-	// 测试帮助信息
-	t.Run("显示帮助信息", func(t *testing.T) {
+	// Test help info
+	t.Run("show help info", func(t *testing.T) {
 		output, err := exec.Command("./rubygems-cli", "-help").CombinedOutput()
-		assert.NoError(t, err, "执行帮助命令失败")
-		assert.Contains(t, string(output), "获取包信息", "帮助输出应包含功能描述")
-		assert.Contains(t, string(output), "搜索包", "帮助输出应包含功能描述")
+		assert.NoError(t, err, "execute help command failed")
+		assert.Contains(t, string(output), "get package info", "help output should contain feature description")
+		assert.Contains(t, string(output), "search packages", "help output should contain feature description")
 	})
 
-	// 测试获取包信息
-	t.Run("获取包信息", func(t *testing.T) {
+	// Test get package info
+	t.Run("get package info", func(t *testing.T) {
 		output, err := exec.Command("./rubygems-cli", "-get", "-gem", "rails").CombinedOutput()
-		assert.NoError(t, err, "获取包信息失败")
-		assert.Contains(t, string(output), "rails", "输出应包含包名")
+		assert.NoError(t, err, "get package info failed")
+		assert.Contains(t, string(output), "rails", "output should contain package name")
 	})
 
-	// 测试搜索功能
-	t.Run("搜索功能", func(t *testing.T) {
+	// Test search function
+	t.Run("search function", func(t *testing.T) {
 		output, err := exec.Command("./rubygems-cli", "-search", "-query", "rails", "-limit", "5").CombinedOutput()
-		assert.NoError(t, err, "搜索包失败")
-		assert.Contains(t, string(output), "rails", "搜索结果应包含rails")
+		assert.NoError(t, err, "search packages failed")
+		assert.Contains(t, string(output), "rails", "search result should contain rails")
 	})
 
-	// 测试获取版本信息
-	t.Run("获取版本信息", func(t *testing.T) {
+	// Test get version info
+	t.Run("get version info", func(t *testing.T) {
 		output, err := exec.Command("./rubygems-cli", "-versions", "-gem", "rails", "-limit", "5").CombinedOutput()
-		assert.NoError(t, err, "获取版本信息失败")
-		assert.Contains(t, string(output), "rails", "版本信息应包含包名")
+		assert.NoError(t, err, "get version info failed")
+		assert.Contains(t, string(output), "rails", "version info should contain package name")
 	})
 
-	// 测试获取依赖信息
-	t.Run("获取依赖信息", func(t *testing.T) {
+	// Test get dependency info
+	t.Run("get dependency info", func(t *testing.T) {
 		output, err := exec.Command("./rubygems-cli", "-deps", "-gem", "rails").CombinedOutput()
-		assert.NoError(t, err, "获取依赖信息失败")
-		assert.NotEmpty(t, output, "依赖信息不应为空")
+		assert.NoError(t, err, "get dependency info failed")
+		assert.NotEmpty(t, output, "dependency info should not be empty")
 	})
 
-	// 测试获取反向依赖信息
-	t.Run("获取反向依赖信息", func(t *testing.T) {
+	// Test get reverse dependency info
+	t.Run("get reverse dependency info", func(t *testing.T) {
 		output, err := exec.Command("./rubygems-cli", "-rdeps", "-gem", "rack", "-limit", "5").CombinedOutput()
-		assert.NoError(t, err, "获取反向依赖信息失败")
-		assert.NotEmpty(t, output, "反向依赖信息不应为空")
+		assert.NoError(t, err, "get reverse dependency info failed")
+		assert.NotEmpty(t, output, "reverse dependency info should not be empty")
 	})
 
-	// 测试JSON输出
-	t.Run("JSON输出", func(t *testing.T) {
+	// Test JSON output
+	t.Run("JSON output", func(t *testing.T) {
 		output, err := exec.Command("./rubygems-cli", "-get", "-gem", "rails", "-json").CombinedOutput()
-		assert.NoError(t, err, "获取JSON格式的包信息失败")
+		assert.NoError(t, err, "get package info in JSON format failed")
 
-		// 尝试解析JSON
+		// Try to parse JSON
 		var result map[string]interface{}
 		err = json.Unmarshal(output, &result)
-		assert.NoError(t, err, "解析JSON输出失败")
-		assert.Equal(t, "rails", result["name"], "JSON应包含正确的包名")
+		assert.NoError(t, err, "parse JSON output failed")
+		assert.Equal(t, "rails", result["name"], "JSON should contain correct package name")
 	})
 
-	// 测试使用缓存
-	t.Run("使用缓存", func(t *testing.T) {
-		// 首次获取
+	// Test using cache
+	t.Run("use cache", func(t *testing.T) {
+		// First get
 		start := time.Now()
 		_, err := exec.Command("./rubygems-cli", "-get", "-gem", "rails").CombinedOutput()
-		assert.NoError(t, err, "首次获取包信息失败")
+		assert.NoError(t, err, "first get package info failed")
 		firstDuration := time.Since(start)
 
-		// 使用缓存再次获取
+		// Use cache to get again
 		start = time.Now()
 		_, err = exec.Command("./rubygems-cli", "-get", "-gem", "rails", "-cache").CombinedOutput()
-		assert.NoError(t, err, "使用缓存获取包信息失败")
+		assert.NoError(t, err, "get package info using cache failed")
 		secondDuration := time.Since(start)
 
-		// 缓存应该更快
-		t.Logf("无缓存耗时: %v, 使用缓存耗时: %v", firstDuration, secondDuration)
+		// Cache should be faster
+		t.Logf("no cache duration: %v, using cache duration: %v", firstDuration, secondDuration)
 	})
 
-	// 测试镜像选择
-	t.Run("镜像选择", func(t *testing.T) {
+	// Test mirror selection
+	t.Run("mirror selection", func(t *testing.T) {
 		mirrors := []string{"default", "ruby-china", "tsinghua", "aliyun"}
 
 		for _, mirror := range mirrors {
 			t.Run(mirror, func(t *testing.T) {
 				output, err := exec.Command("./rubygems-cli", "-get", "-gem", "rake", "-mirror", mirror).CombinedOutput()
-				assert.NoError(t, err, "使用镜像 %s 获取包信息失败", mirror)
-				assert.Contains(t, string(output), "rake", "使用镜像 %s 的输出应包含包名", mirror)
+				assert.NoError(t, err, "get package info using mirror %s failed", mirror)
+				assert.Contains(t, string(output), "rake", "output using mirror %s should contain package name", mirror)
 			})
 		}
 	})
 
-	// 测试无效的命令
-	t.Run("无效的命令", func(t *testing.T) {
+	// Test invalid command
+	t.Run("invalid command", func(t *testing.T) {
 		cmd := exec.Command("./rubygems-cli", "-invalid", "-gem", "rails")
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		err := cmd.Run()
 
-		// 命令应该退出且有错误信息
-		assert.Error(t, err, "无效命令应返回错误")
+		// Command should exit with an error message
+		assert.Error(t, err, "invalid command should return error")
 	})
 
-	// 测试清理
+	// Test cleanup
 	defer func() {
 		err := exec.Command("rm", "-f", "rubygems-cli").Run()
 		if err != nil {
-			t.Logf("清理文件失败: %v", err)
+			t.Logf("cleanup file failed: %v", err)
 		}
 	}()
 }

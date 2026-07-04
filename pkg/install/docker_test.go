@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// Docker 跨平台集成测试
-// 这些测试需要 Docker 环境，使用 -docker 标志启用
+// Docker cross-platform integration tests
+// These tests require a Docker environment, enabled with the -docker flag
 
 var dockerEnabled = os.Getenv("TEST_DOCKER") == "1"
 
@@ -23,16 +23,16 @@ func dockerAvailable() bool {
 	return cmd.Run() == nil
 }
 
-// DockerTestConfig 定义 Docker 测试配置
+// DockerTestConfig defines the Docker test configuration
 type DockerTestConfig struct {
 	Image       string
 	Distro      LinuxDistro
 	PackageMgr  PackageManager
-	InstallCmd  string // 验证安装后应存在的命令
-	SetupCmds   []string // 额外的容器设置命令
+	InstallCmd  string // command that should exist after verifying installation
+	SetupCmds   []string // additional container setup commands
 }
 
-// getDockerTestConfigs 返回所有 Docker 测试配置
+// getDockerTestConfigs returns all Docker test configurations
 func getDockerTestConfigs() []DockerTestConfig {
 	return []DockerTestConfig{
 		{
@@ -73,10 +73,10 @@ func getDockerTestConfigs() []DockerTestConfig {
 	}
 }
 
-// TestDockerPlatformDetection 测试在 Docker 容器中的平台检测
+// TestDockerPlatformDetection tests platform detection in a Docker container
 func TestDockerPlatformDetection(t *testing.T) {
 	if !dockerAvailable() {
-		t.Skip("Docker 测试未启用，设置 TEST_DOCKER=1 启用")
+		t.Skip("Docker tests not enabled, set TEST_DOCKER=1 to enable")
 	}
 
 	configs := getDockerTestConfigs()
@@ -88,10 +88,10 @@ func TestDockerPlatformDetection(t *testing.T) {
 	}
 }
 
-// TestDockerRubyInstallation 测试在 Docker 容器中的 Ruby 安装
+// TestDockerRubyInstallation tests Ruby installation in a Docker container
 func TestDockerRubyInstallation(t *testing.T) {
 	if !dockerAvailable() {
-		t.Skip("Docker 测试未启用，设置 TEST_DOCKER=1 启用")
+		t.Skip("Docker tests not enabled, set TEST_DOCKER=1 to enable")
 	}
 
 	configs := getDockerTestConfigs()
@@ -103,12 +103,12 @@ func TestDockerRubyInstallation(t *testing.T) {
 	}
 }
 
-// testDockerPlatformDetection 在 Docker 容器中测试平台检测
+// testDockerPlatformDetection tests platform detection in a Docker container
 func testDockerPlatformDetection(t *testing.T, cfg DockerTestConfig) {
-	// 在容器中运行一个简单的 Go 程序来检测平台
-	// 但由于我们需要编译，先使用 shell 脚本来检测
+	// Run a simple Go program in the container to detect the platform
+	// But since we need to compile, first use a shell script to detect
 
-	// 1. 检测 /etc/os-release
+	// 1. Detect /etc/os-release
 	script := `
 cat /etc/os-release 2>/dev/null || echo "NO_OS_RELEASE"
 if [ -f /etc/debian_version ]; then echo "DEBIAN"; fi
@@ -126,44 +126,44 @@ which zypper 2>/dev/null && echo "HAS_ZYPPER"
 
 	output, err := runDockerCommand(cfg.Image, script, 60)
 	if err != nil {
-		t.Fatalf("Docker 命令执行失败: %v\n输出: %s", err, output)
+		t.Fatalf("Docker command execution failed: %v\nOutput: %s", err, output)
 	}
 
 	t.Logf("=== %s (%s) ===", cfg.Distro, cfg.Image)
 	t.Logf("%s", output)
 
-	// 验证预期的包管理器存在
+	// Verify that the expected package manager exists
 	switch cfg.PackageMgr {
 	case PMApt:
 		if !strings.Contains(output, "HAS_APT_GET") && !strings.Contains(output, "HAS_APT") {
-			t.Errorf("期望找到 apt/apt-get，但未找到")
+			t.Errorf("expected to find apt/apt-get, but not found")
 		}
 	case PMYum:
 		if !strings.Contains(output, "HAS_YUM") {
-			t.Errorf("期望找到 yum，但未找到")
+			t.Errorf("expected to find yum, but not found")
 		}
 	case PMDnf:
 		if !strings.Contains(output, "HAS_DNF") {
-			t.Errorf("期望找到 dnf，但未找到")
+			t.Errorf("expected to find dnf, but not found")
 		}
 	case PMApk:
 		if !strings.Contains(output, "HAS_APK") {
-			t.Errorf("期望找到 apk，但未找到")
+			t.Errorf("expected to find apk, but not found")
 		}
 	case PMPacman:
 		if !strings.Contains(output, "HAS_PACMAN") {
-			t.Errorf("期望找到 pacman，但未找到")
+			t.Errorf("expected to find pacman, but not found")
 		}
 	case PMZypper:
 		if !strings.Contains(output, "HAS_ZYPPER") {
-			t.Errorf("期望找到 zypper，但未找到")
+			t.Errorf("expected to find zypper, but not found")
 		}
 	}
 }
 
-// testDockerRubyInstallation 在 Docker 容器中实际安装 Ruby
+// testDockerRubyInstallation actually installs Ruby in a Docker container
 func testDockerRubyInstallation(t *testing.T, cfg DockerTestConfig) {
-	// 构建安装命令
+	// Build the install command
 	var installScript string
 
 	switch cfg.PackageMgr {
@@ -194,10 +194,10 @@ pacman -Sy --noconfirm ruby 2>&1
 zypper install -y ruby ruby-devel 2>&1
 `
 	default:
-		t.Fatalf("不支持的包管理器: %s", cfg.PackageMgr)
+		t.Fatalf("unsupported package manager: %s", cfg.PackageMgr)
 	}
 
-	// 添加验证命令
+	// Add verification commands
 	verifyScript := installScript + `
 echo "=== VERIFICATION ==="
 command -v ruby && ruby --version || echo "RUBY_NOT_FOUND"
@@ -206,40 +206,40 @@ command -v gem && gem --version || echo "GEM_NOT_FOUND"
 
 	output, err := runDockerCommand(cfg.Image, verifyScript, 600)
 	if err != nil {
-		t.Fatalf("Docker 安装测试失败: %v\n输出: %s", err, output)
+		t.Fatalf("Docker installation test failed: %v\nOutput: %s", err, output)
 	}
 
-	t.Logf("=== %s (%s) 安装结果 ===", cfg.Distro, cfg.Image)
+	t.Logf("=== %s (%s) installation result ===", cfg.Distro, cfg.Image)
 	t.Logf("%s", output)
 
-	// 验证安装成功
+	// Verify the installation succeeded
 	if strings.Contains(output, "RUBY_NOT_FOUND") {
-		t.Errorf("Ruby 安装失败: ruby 命令未找到")
+		t.Errorf("Ruby installation failed: ruby command not found")
 	}
 	if strings.Contains(output, "GEM_NOT_FOUND") {
-		t.Errorf("gem 安装失败: gem 命令未找到")
+		t.Errorf("gem installation failed: gem command not found")
 	}
 
-	// 提取并显示版本信息
+	// Extract and display version info
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "ruby ") {
-			t.Logf("  Ruby 版本: %s", line)
+			t.Logf("  Ruby version: %s", line)
 		}
 		if isVersionString(line) && len(line) < 20 {
-			// 可能是 gem 版本号
-			t.Logf("  版本号: %s", line)
+			// Possibly a gem version number
+			t.Logf("  Version number: %s", line)
 		}
 	}
 }
 
-// runDockerCommand 在 Docker 容器中执行脚本
+// runDockerCommand executes a script in a Docker container
 func runDockerCommand(image, script string, timeoutSec int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
 	defer cancel()
 
-	// 使用 docker run --rm 执行命令
+	// Use docker run --rm to execute the command
 	args := []string{
 		"run", "--rm",
 		"--network", "host",
@@ -251,16 +251,16 @@ func runDockerCommand(image, script string, timeoutSec int) (string, error) {
 	output, err := cmd.CombinedOutput()
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return string(output), fmt.Errorf("Docker 命令超时 (%d秒)", timeoutSec)
+		return string(output), fmt.Errorf("Docker command timed out (%d seconds)", timeoutSec)
 	}
 
 	return string(output), err
 }
 
-// TestDockerOSReleaseParsing 在 Docker 容器中测试 os-release 解析
+// TestDockerOSReleaseParsing tests os-release parsing in a Docker container
 func TestDockerOSReleaseParsing(t *testing.T) {
 	if !dockerAvailable() {
-		t.Skip("Docker 测试未启用，设置 TEST_DOCKER=1 启用")
+		t.Skip("Docker tests not enabled, set TEST_DOCKER=1 to enable")
 	}
 
 	tests := []struct {
@@ -278,7 +278,7 @@ func TestDockerOSReleaseParsing(t *testing.T) {
 		t.Run(tt.image, func(t *testing.T) {
 			output, err := runDockerCommand(tt.image, "cat /etc/os-release", 30)
 			if err != nil {
-				t.Fatalf("读取 /etc/os-release 失败: %v", err)
+				t.Fatalf("failed to read /etc/os-release: %v", err)
 			}
 
 			id := parseOSReleaseField(output, "ID")
@@ -291,13 +291,13 @@ func TestDockerOSReleaseParsing(t *testing.T) {
 	}
 }
 
-// TestDockerBundlerInstallation 测试在 Docker 中安装 bundler
+// TestDockerBundlerInstallation tests installing bundler in Docker
 func TestDockerBundlerInstallation(t *testing.T) {
 	if !dockerAvailable() {
-		t.Skip("Docker 测试未启用，设置 TEST_DOCKER=1 启用")
+		t.Skip("Docker tests not enabled, set TEST_DOCKER=1 to enable")
 	}
 
-	// 仅测试 Ubuntu，因为 bundler 安装需要网络
+	// Only test Ubuntu, because bundler installation requires network
 	script := `
 apt-get update -qq
 apt-get install -y -qq ruby ruby-dev 2>&1
@@ -309,12 +309,12 @@ which bundler && bundler --version || echo "BUNDLER_NOT_FOUND"
 
 	output, err := runDockerCommand("ubuntu:22.04", script, 300)
 	if err != nil {
-		t.Fatalf("Docker bundler 安装测试失败: %v\n输出: %s", err, output)
+		t.Fatalf("Docker bundler installation test failed: %v\nOutput: %s", err, output)
 	}
 
-	t.Logf("Ubuntu bundler 安装结果:\n%s", output)
+	t.Logf("Ubuntu bundler installation result:\n%s", output)
 
 	if strings.Contains(output, "BUNDLER_NOT_FOUND") {
-		t.Error("bundler 安装失败")
+		t.Error("bundler installation failed")
 	}
 }

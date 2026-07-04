@@ -10,14 +10,14 @@ import (
 )
 
 func main() {
-	// 创建上下文，设置超时时间为30秒
+	// Create context, set timeout to 30 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 创建基础仓库实例
+	// Create base repository instance
 	repo := repository.NewRepository()
 
-	// 定义要批量查询的Gem列表
+	// Define the list of gems to query in bulk
 	gems := []string{
 		"rails",
 		"rack",
@@ -31,39 +31,39 @@ func main() {
 		"zeitwerk",
 	}
 
-	fmt.Println("开始批量获取包信息...")
+	fmt.Println("start bulk get package info...")
 	startTime := time.Now()
 
-	// 创建批量操作选项，设置最大并发数为5
+	// Create bulk operation options, set max concurrency to 5
 	options := repository.NewBulkOptions().WithMaxConcurrency(5)
 
-	// 批量获取包信息
+	// Bulk get package info
 	results := repo.BulkGetPackages(ctx, gems, options)
 
-	// 计算耗时
+	// Calculate elapsed time
 	duration := time.Since(startTime)
-	fmt.Printf("批量获取完成，耗时: %v\n\n", duration)
+	fmt.Printf("bulk get done, elapsed: %v\n\n", duration)
 
-	// 显示结果
+	// Display results
 	for _, result := range results {
 		if result.Error != nil {
-			fmt.Printf("获取 %s 失败: %v\n", result.Key, result.Error)
+			fmt.Printf("failed to get %s: %v\n", result.Key, result.Error)
 			continue
 		}
 
 		pkg := result.Value
-		fmt.Printf("包名: %s\n", pkg.Name)
-		fmt.Printf("  当前版本: %s\n", pkg.Version)
-		fmt.Printf("  主页: %s\n", pkg.HomepageURI)
-		fmt.Printf("  下载量: %d\n", pkg.Downloads)
-		fmt.Printf("  描述: %s\n\n", pkg.Info)
+		fmt.Printf("package name: %s\n", pkg.Name)
+		fmt.Printf("  current version: %s\n", pkg.Version)
+		fmt.Printf("  homepage: %s\n", pkg.HomepageURI)
+		fmt.Printf("  downloads: %d\n", pkg.Downloads)
+		fmt.Printf("  description: %s\n\n", pkg.Info)
 	}
 
-	// 对比顺序执行的时间
-	fmt.Println("开始顺序获取包信息进行对比...")
+	// Compare with sequential execution time
+	fmt.Println("start sequential get package info for comparison...")
 	startTime = time.Now()
 
-	// 顺序获取包信息
+	// Sequential get package info
 	sequentialResults := make([]*repository.BulkResult[*models.PackageInformation], 0, len(gems))
 	for _, gemName := range gems {
 		pkg, err := repo.GetPackage(ctx, gemName)
@@ -74,35 +74,35 @@ func main() {
 		})
 	}
 
-	// 计算耗时
+	// Calculate elapsed time
 	sequentialDuration := time.Since(startTime)
-	fmt.Printf("顺序获取完成，耗时: %v\n", sequentialDuration)
-	fmt.Printf("并发处理比顺序处理快 %.2f 倍\n\n", float64(sequentialDuration)/float64(duration))
+	fmt.Printf("sequential get done, elapsed: %v\n", sequentialDuration)
+	fmt.Printf("concurrent processing is %.2f times faster than sequential processing\n\n", float64(sequentialDuration)/float64(duration))
 
-	// 演示批量获取版本信息
-	fmt.Println("开始批量获取版本信息...")
+	// Demonstrate bulk get version info
+	fmt.Println("start bulk get version info...")
 	startTime = time.Now()
 
-	// 选择前5个gem进行版本查询
+	// Select the first 5 gems for version query
 	selectedGems := gems[:5]
 	versionResults := repo.BulkGetVersions(ctx, selectedGems, options)
 
-	// 计算耗时
+	// Calculate elapsed time
 	duration = time.Since(startTime)
-	fmt.Printf("批量获取版本信息完成，耗时: %v\n\n", duration)
+	fmt.Printf("bulk get version info done, elapsed: %v\n\n", duration)
 
-	// 显示版本信息结果
+	// Display version info results
 	for _, result := range versionResults {
 		if result.Error != nil {
-			fmt.Printf("获取 %s 版本信息失败: %v\n", result.Key, result.Error)
+			fmt.Printf("failed to get version info for %s: %v\n", result.Key, result.Error)
 			continue
 		}
 
 		versions := result.Value
-		fmt.Printf("包名: %s\n", result.Key)
-		fmt.Printf("  版本数量: %d\n", len(versions))
+		fmt.Printf("package name: %s\n", result.Key)
+		fmt.Printf("  version count: %d\n", len(versions))
 		if len(versions) > 0 {
-			fmt.Printf("  最新几个版本: %s", versions[0].Number)
+			fmt.Printf("  latest few versions: %s", versions[0].Number)
 			for i := 1; i < min(5, len(versions)); i++ {
 				fmt.Printf(", %s", versions[i].Number)
 			}
@@ -111,39 +111,39 @@ func main() {
 		fmt.Println()
 	}
 
-	// 演示批量获取依赖信息
-	fmt.Println("开始批量获取依赖信息...")
+	// Demonstrate bulk get dependency info
+	fmt.Println("start bulk get dependency info...")
 	startTime = time.Now()
 
-	// 获取依赖信息
+	// Get dependency info
 	dependencyResults := repo.BulkGetDependencies(ctx, selectedGems, options)
 
-	// 计算耗时
+	// Calculate elapsed time
 	duration = time.Since(startTime)
-	fmt.Printf("批量获取依赖信息完成，耗时: %v\n\n", duration)
+	fmt.Printf("bulk get dependency info done, elapsed: %v\n\n", duration)
 
-	// 显示依赖信息结果
+	// Display dependency info results
 	for _, result := range dependencyResults {
 		if result.Error != nil {
-			fmt.Printf("获取 %s 依赖信息失败: %v\n", result.Key, result.Error)
+			fmt.Printf("failed to get dependency info for %s: %v\n", result.Key, result.Error)
 			continue
 		}
 
 		dependencies := result.Value
-		fmt.Printf("包名: %s\n", result.Key)
-		fmt.Printf("  依赖数量: %d\n", len(dependencies))
+		fmt.Printf("package name: %s\n", result.Key)
+		fmt.Printf("  dependency count: %d\n", len(dependencies))
 		if len(dependencies) > 0 {
-			fmt.Println("  部分依赖列表:")
+			fmt.Println("  partial dependency list:")
 			for i := 0; i < min(5, len(dependencies)); i++ {
 				dep := dependencies[i]
-				fmt.Printf("    - %s (要求: %s)\n", dep.Name, dep.Requirements)
+				fmt.Printf("    - %s (requirements: %s)\n", dep.Name, dep.Requirements)
 			}
 		}
 		fmt.Println()
 	}
 }
 
-// Go 1.20 及以下版本没有内置min函数，手动实现
+// Go 1.20 and below do not have a built-in min function, implemented manually
 func min(a, b int) int {
 	if a < b {
 		return a

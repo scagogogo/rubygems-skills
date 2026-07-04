@@ -2,81 +2,81 @@ package models
 
 import "time"
 
-// APIKey 表示 RubyGems.org 的 API Key 信息
+// APIKey represents the API key info of RubyGems.org
 // GET /api/v1/api_key
 // POST /api/v1/api_key
 type APIKey struct {
-	// API Key 的唯一标识
+	// unique identifier of the API key
 	ID int `json:"id"`
 
-	// API Key 的名称
+	// name of the API key
 	Name string `json:"name"`
 
-	// API Key 的权限范围列表
-	// 可能的值: "index_rubygems", "push_rubygem", "yank_rubygem", "add_owner", "remove_owner",
+	// permission scope list of the API key
+	// possible values: "index_rubygems", "push_rubygem", "yank_rubygem", "add_owner", "remove_owner",
 	// "access_webhooks", "dashboard", "read_settings", "write_settings"
 	Scopes []string `json:"scopes"`
 
-	// API Key 的值（仅在创建时返回）
+	// the API key value (only returned on creation)
 	Key string `json:"key,omitempty"`
 
-	// 是否启用了 MFA
+	// whether MFA is enabled
 	MFA string `json:"mfa,omitempty"`
 
-	// 关联的 gem 包名称（如果有）
+	// associated gem package name (if any)
 	RubygemName string `json:"rubygem_name,omitempty"`
 
-	// 过期时间
+	// expiration time
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
-	// 创建时间
+	// created time
 	CreatedAt time.Time `json:"created_at"`
 
-	// 更新时间
+	// updated time
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// CreateAPIKeyRequest 创建 API Key 的请求参数
+// CreateAPIKeyRequest request parameters for creating an API key
 // POST /api/v1/api_key
 type CreateAPIKeyRequest struct {
-	// API Key 的名称（必填）
+	// name of the API key (required)
 	Name string `json:"name"`
 
-	// API Key 的权限范围（必填）
+	// permission scopes of the API key (required)
 	Scopes []string `json:"scopes"`
 
-	// MFA 设置: "enabled", "disabled"
+	// MFA setting: "enabled", "disabled"
 	MFA string `json:"mfa,omitempty"`
 
-	// 关联的 gem 包名称（可选）
+	// associated gem package name (optional)
 	RubygemName string `json:"rubygem_name,omitempty"`
 
-	// 过期时间（可选，ISO8601 格式）
+	// expiration time (optional, ISO8601 format)
 	ExpiresAt string `json:"expires_at,omitempty"`
 }
 
-// UpdateAPIKeyRequest 更新 API Key 的请求参数
+// UpdateAPIKeyRequest request parameters for updating an API key
 // PATCH /api/v1/api_key
 type UpdateAPIKeyRequest struct {
-	// 要更新的 API Key 值（必填，用于标识哪个 key）
+	// the API key value to update (required, used to identify which key)
 	APIKey string `json:"api_key"`
 
-	// 新的权限范围
+	// new permission scopes
 	Scopes []string `json:"scopes,omitempty"`
 
-	// MFA 设置: "enabled", "disabled"
+	// MFA setting: "enabled", "disabled"
 	MFA string `json:"mfa,omitempty"`
 }
 
-// MFAStatus 表示用户的多因素认证状态
+// MFAStatus represents the user's multi-factor authentication status
 // GET /api/v1/multifactor_auth
 type MFAStatus struct {
-	// 是否已启用 MFA
+	// whether MFA is enabled
 	Enabled bool `json:"enabled"`
 
-	// MFA 级别: "disabled", "enabled", "required"
+	// MFA level: "disabled", "enabled", "required"
 	Level string `json:"level"`
 
-	// 可用的 MFA 方法
+	// available MFA methods
 	Methods []string `json:"methods,omitempty"`
 }

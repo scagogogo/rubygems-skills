@@ -8,173 +8,173 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// 测试获取时间段内的版本
+// Test getting versions within a time frame
 func TestRepository_GetTimeFrameVersions(t *testing.T) {
 	// Skip the test if running in short mode (CI environments)
 	if testing.Short() {
 		t.Skip("Skipping API test in short mode")
 	}
 
-	// 创建上下文
+	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 创建仓库实例
+	// Create repository instance
 	repo := NewRepository()
 
-	// 设置时间范围，选择最近24小时
+	// Set the time range, choose the last 24 hours
 	to := time.Now()
 	from := to.Add(-24 * time.Hour)
 
-	// 获取时间段内的版本
+	// Get versions within the time frame
 	versions, err := repo.GetTimeFrameVersions(ctx, from, to)
 
-	// 验证结果
-	assert.NoError(t, err, "获取时间段内的版本不应该返回错误")
-	assert.NotNil(t, versions, "返回的版本列表不应为nil")
+	// Verify the result
+	assert.NoError(t, err, "getting versions within a time frame should not return an error")
+	assert.NotNil(t, versions, "returned version list should not be nil")
 
-	// 如果没有返回版本，只是说明这段时间内没有版本发布，不算错误
+	// If no versions are returned, it just means no versions were published during this period, not an error
 	if len(versions) > 0 {
-		// 验证版本的创建时间是否在指定范围内
+		// Verify that the version creation time is within the specified range
 		for _, version := range versions {
 			assert.True(t, version.CreatedAt.After(from) && version.CreatedAt.Before(to.Add(time.Minute)),
-				"版本创建时间应该在指定范围内: %v-%v, 实际: %v", from, to, version.CreatedAt)
-			assert.NotEmpty(t, version.Number, "版本号不能为空")
+				"version creation time should be within the specified range: %v-%v, actual: %v", from, to, version.CreatedAt)
+			assert.NotEmpty(t, version.Number, "version number must not be empty")
 		}
 	}
 }
 
-// 测试获取包的依赖
+// Test getting package dependencies
 func TestRepository_GetDependencies(t *testing.T) {
 	// Skip the test if running in short mode (CI environments)
 	if testing.Short() {
 		t.Skip("Skipping API test in short mode")
 	}
 
-	// 创建上下文
+	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 创建仓库实例
+	// Create repository instance
 	repo := NewRepository()
 
-	// 测试单个包依赖
-	t.Run("单个包依赖", func(t *testing.T) {
-		// 选择一个常见包，它应该有依赖
+	// Test single package dependencies
+	t.Run("single package dependencies", func(t *testing.T) {
+		// Choose a common package, it should have dependencies
 		dependencies, err := repo.GetDependencies(ctx, "rails")
 
-		assert.NoError(t, err, "获取依赖不应返回错误")
-		assert.NotNil(t, dependencies, "依赖列表不应为nil")
-		assert.NotEmpty(t, dependencies, "Rails应该有依赖")
+		assert.NoError(t, err, "getting dependencies should not return an error")
+		assert.NotNil(t, dependencies, "dependency list should not be nil")
+		assert.NotEmpty(t, dependencies, "Rails should have dependencies")
 
-		// 检查依赖项的字段
+		// Check the fields of the dependency items
 		for _, dep := range dependencies {
-			assert.NotEmpty(t, dep.Name, "依赖项名不能为空")
-			assert.NotEmpty(t, dep.Requirements, "依赖要求不能为空")
+			assert.NotEmpty(t, dep.Name, "dependency name must not be empty")
+			assert.NotEmpty(t, dep.Requirements, "dependency requirements must not be empty")
 		}
 	})
 
-	// 测试多个包依赖
-	t.Run("多个包依赖", func(t *testing.T) {
-		// 选择几个常见包
+	// Test multiple package dependencies
+	t.Run("multiple package dependencies", func(t *testing.T) {
+		// Choose several common packages
 		dependencies, err := repo.GetDependencies(ctx, "rails", "rack", "nokogiri")
 
-		assert.NoError(t, err, "获取多个包依赖不应返回错误")
-		assert.NotNil(t, dependencies, "依赖列表不应为nil")
-		assert.NotEmpty(t, dependencies, "这些包应该有依赖")
+		assert.NoError(t, err, "getting multiple package dependencies should not return an error")
+		assert.NotNil(t, dependencies, "dependency list should not be nil")
+		assert.NotEmpty(t, dependencies, "these packages should have dependencies")
 	})
 
-	// 测试获取不存在包的依赖
-	t.Run("不存在的包", func(t *testing.T) {
-		// 使用一个极大概率不存在的包名
+	// Test getting dependencies for a non-existent package
+	t.Run("non-existent package", func(t *testing.T) {
+		// Use a package name that almost certainly does not exist
 		dependencies, err := repo.GetDependencies(ctx, "non_existent_package_xyz_123")
 
-		// 这里应该返回空列表而不是错误
-		assert.NoError(t, err, "获取不存在包的依赖应返回空列表，不是错误")
-		assert.Empty(t, dependencies, "不存在的包不应有依赖")
+		// This should return an empty list instead of an error
+		assert.NoError(t, err, "getting dependencies for a non-existent package should return an empty list, not an error")
+		assert.Empty(t, dependencies, "non-existent package should not have dependencies")
 	})
 }
 
-// 测试获取包的反向依赖
+// Test getting reverse dependencies of a package
 func TestRepository_GetReverseDependencies(t *testing.T) {
 	// Skip the test if running in short mode (CI environments)
 	if testing.Short() {
 		t.Skip("Skipping API test in short mode")
 	}
 
-	// 创建上下文
+	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 创建仓库实例
+	// Create repository instance
 	repo := NewRepository()
 
-	// 测试常用包的反向依赖
-	t.Run("常用包反向依赖", func(t *testing.T) {
-		// 选择一个基础包，它应该被很多其他包依赖
+	// Test reverse dependencies of a common package
+	t.Run("common package reverse dependencies", func(t *testing.T) {
+		// Choose a base package, it should be depended on by many other packages
 		dependencies, err := repo.GetReverseDependencies(ctx, "rack")
 
-		assert.NoError(t, err, "获取反向依赖不应返回错误")
-		assert.NotNil(t, dependencies, "反向依赖列表不应为nil")
-		assert.NotEmpty(t, dependencies, "Rack应该有反向依赖")
+		assert.NoError(t, err, "getting reverse dependencies should not return an error")
+		assert.NotNil(t, dependencies, "reverse dependencies list should not be nil")
+		assert.NotEmpty(t, dependencies, "Rack should have reverse dependencies")
 	})
 
-	// 测试获取不存在包的反向依赖
-	t.Run("不存在的包", func(t *testing.T) {
-		// 使用一个极大概率不存在的包名
+	// Test getting reverse dependencies for a non-existent package
+	t.Run("non-existent package", func(t *testing.T) {
+		// Use a package name that almost certainly does not exist
 		dependencies, err := repo.GetReverseDependencies(ctx, "non_existent_package_xyz_123")
 
-		// 这里应该返回空列表而不是错误
-		assert.NoError(t, err, "获取不存在包的反向依赖应返回空列表，不是错误")
-		assert.Empty(t, dependencies, "不存在的包不应有反向依赖")
+		// This should return an empty list instead of an error
+		assert.NoError(t, err, "getting reverse dependencies for a non-existent package should return an empty list, not an error")
+		assert.Empty(t, dependencies, "non-existent package should not have reverse dependencies")
 	})
 
-	// 测试新包的反向依赖
-	t.Run("新包反向依赖", func(t *testing.T) {
-		// 先获取最新的包列表
+	// Test reverse dependencies of a new package
+	t.Run("new package reverse dependencies", func(t *testing.T) {
+		// First get the latest package list
 		latestGems, err := repo.LatestGems(ctx)
 		if err != nil || len(latestGems) == 0 {
-			t.Skip("无法获取最新包列表")
+			t.Skip("cannot get latest package list")
 			return
 		}
 
-		// 选择最新发布的包，它可能没有反向依赖
+		// Choose the most recently published package, it may not have reverse dependencies
 		dependencies, err := repo.GetReverseDependencies(ctx, latestGems[0].Name)
 
-		// 不关心是否有依赖，但不应该出错
-		assert.NoError(t, err, "获取新包的反向依赖不应返回错误")
-		assert.NotNil(t, dependencies, "反向依赖列表不应为nil")
+		// Do not care whether there are dependencies, but it should not error
+		assert.NoError(t, err, "getting reverse dependencies for a new package should not return an error")
+		assert.NotNil(t, dependencies, "reverse dependencies list should not be nil")
 	})
 }
 
-// 测试使用不同的镜像源
+// Test using different mirror sources
 func TestDifferentMirrors(t *testing.T) {
 	// Skip the test if running in short mode (CI environments)
 	if testing.Short() {
 		t.Skip("Skipping mirror tests in short mode")
 	}
 
-	// 创建上下文
+	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 创建不同镜像源的仓库
+	// Create repositories with different mirror sources
 	repos := map[string]Repository{
-		"默认":        NewRepository(),
+		"default":    NewRepository(),
 		"RubyChina": NewRubyChinaRepository(),
 		"TsingHua":  NewTSingHuaRepository(),
 		"AliYun":    NewAliYunRepository(),
 	}
 
-	// 对每个镜像源进行测试
+	// Test each mirror source
 	for name, repo := range repos {
 		t.Run(name, func(t *testing.T) {
-			// 测试获取包信息
+			// Test getting package info
 			pkg, err := repo.GetPackage(ctx, "rails")
-			assert.NoError(t, err, "%s: 获取包信息失败", name)
-			assert.NotNil(t, pkg, "%s: 包信息为nil", name)
+			assert.NoError(t, err, "%s: failed to get package info", name)
+			assert.NotNil(t, pkg, "%s: package info is nil", name)
 			if pkg != nil {
-				assert.Equal(t, "rails", pkg.Name, "%s: 包名不匹配", name)
+				assert.Equal(t, "rails", pkg.Name, "%s: package name mismatch", name)
 			} else {
 				// Skip further assertions if pkg is nil
 				t.SkipNow()
@@ -183,62 +183,62 @@ func TestDifferentMirrors(t *testing.T) {
 	}
 }
 
-// 测试代理设置 (这个测试需要有效的代理，不在CI环境中运行)
+// Test proxy settings (this test requires a valid proxy, not run in CI environment)
 func TestProxySetting(t *testing.T) {
-	// 跳过CI环境中的测试
+	// Skip tests in CI environment
 	if testing.Short() {
-		t.Skip("在短模式下跳过代理测试")
+		t.Skip("skip proxy test in short mode")
 	}
 
-	// 创建上下文
+	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 创建带代理的仓库选项
-	// 注意: 这是一个示例，需要替换为实际可用的代理
+	// Create repository options with proxy
+	// Note: this is an example, replace with an actually usable proxy
 	proxyURL := ""
 	if proxyURL == "" {
-		t.Skip("未设置代理URL，跳过测试")
+		t.Skip("proxy URL not set, skip test")
 	}
 
 	options := NewOptions().SetProxy(proxyURL)
 	repo := NewRepository(options)
 
-	// 测试基本功能是否正常
+	// Test whether basic functionality works
 	pkg, err := repo.GetPackage(ctx, "rails")
-	assert.NoError(t, err, "通过代理获取包信息失败")
-	assert.NotNil(t, pkg, "包信息为nil")
+	assert.NoError(t, err, "failed to get package info via proxy")
+	assert.NotNil(t, pkg, "package info is nil")
 	if pkg != nil {
-		assert.Equal(t, "rails", pkg.Name, "包名不匹配")
+		assert.Equal(t, "rails", pkg.Name, "package name mismatch")
 	}
 }
 
-// 测试Token设置 (这个测试需要有效的Token，不在CI环境中运行)
+// Test token settings (this test requires a valid token, not run in CI environment)
 func TestTokenSetting(t *testing.T) {
-	// 跳过CI环境中的测试
+	// Skip tests in CI environment
 	if testing.Short() {
-		t.Skip("在短模式下跳过Token测试")
+		t.Skip("skip token test in short mode")
 	}
 
-	// 创建上下文
+	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 创建带Token的仓库选项
-	// 注意: 这是一个示例，需要替换为实际可用的Token
+	// Create repository options with token
+	// Note: this is an example, replace with an actually usable token
 	token := ""
 	if token == "" {
-		t.Skip("未设置Token，跳过测试")
+		t.Skip("token not set, skip test")
 	}
 
 	options := NewOptions().SetToken(token)
 	repo := NewRepository(options)
 
-	// 测试基本功能是否正常
+	// Test whether basic functionality works
 	pkg, err := repo.GetPackage(ctx, "rails")
-	assert.NoError(t, err, "使用Token获取包信息失败")
-	assert.NotNil(t, pkg, "包信息为nil")
+	assert.NoError(t, err, "failed to get package info using token")
+	assert.NotNil(t, pkg, "package info is nil")
 	if pkg != nil {
-		assert.Equal(t, "rails", pkg.Name, "包名不匹配")
+		assert.Equal(t, "rails", pkg.Name, "package name mismatch")
 	}
 }

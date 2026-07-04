@@ -9,26 +9,26 @@ import (
 	"github.com/scagogogo/rubygems-skills/pkg/models"
 )
 
-// 创建一个模拟的仓库实现用于测试
+// Create a mock repository implementation for testing
 type mockRepository struct {
 	mockPackages map[string]*models.PackageInformation
 	mockVersions map[string][]*models.Version
-	// 人为延迟，模拟网络请求延迟
+	// artificial delay to simulate network request latency
 	delay time.Duration
-	// 人为错误，模拟请求失败
+	// artificial error to simulate request failure
 	failOn map[string]error
 }
 
-// 创建一个新的模拟仓库
+// Create a new mock repository
 func newMockRepository() *mockRepository {
 	repo := &mockRepository{
 		mockPackages: make(map[string]*models.PackageInformation),
 		mockVersions: make(map[string][]*models.Version),
-		delay:        10 * time.Millisecond, // 默认10ms延迟
+		delay:        10 * time.Millisecond, // default 10ms delay
 		failOn:       make(map[string]error),
 	}
 
-	// 添加一些测试数据
+	// Add some test data
 	repo.mockPackages["rails"] = &models.PackageInformation{
 		Name:        "rails",
 		Version:     "7.0.5",
@@ -45,7 +45,7 @@ func newMockRepository() *mockRepository {
 		Info:        "Rack provides a minimal interface between webservers and Ruby frameworks",
 	}
 
-	// 添加一些版本信息
+	// Add some version info
 	repo.mockVersions["rails"] = []*models.Version{
 		{Number: "7.0.5", CreatedAt: time.Now().Add(-24 * time.Hour)},
 		{Number: "7.0.4", CreatedAt: time.Now().Add(-48 * time.Hour)},
@@ -59,30 +59,30 @@ func newMockRepository() *mockRepository {
 	return repo
 }
 
-// 设置特定gem会触发的错误
+// Set the error that a specific gem will trigger
 func (m *mockRepository) setFailOn(gemName string, err error) *mockRepository {
 	m.failOn[gemName] = err
 	return m
 }
 
-// 实现GetPackage方法
+// Implement the GetPackage method
 func (m *mockRepository) GetPackage(ctx context.Context, gemName string) (*models.PackageInformation, error) {
-	// 检查是否应该失败
+	// Check whether it should fail
 	if err, ok := m.failOn[gemName]; ok {
 		return nil, err
 	}
 
-	// 模拟网络延迟
+	// Simulate network latency
 	time.Sleep(m.delay)
 
-	// 检查上下文是否已取消
+	// Check whether the context has been cancelled
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
-	// 返回结果
+	// Return the result
 	pkg, ok := m.mockPackages[gemName]
 	if !ok {
 		return nil, errors.New("gem not found")
@@ -90,24 +90,24 @@ func (m *mockRepository) GetPackage(ctx context.Context, gemName string) (*model
 	return pkg, nil
 }
 
-// 实现GetGemVersions方法
+// Implement the GetGemVersions method
 func (m *mockRepository) GetGemVersions(ctx context.Context, gemName string) ([]*models.Version, error) {
-	// 检查是否应该失败
+	// Check whether it should fail
 	if err, ok := m.failOn[gemName]; ok {
 		return nil, err
 	}
 
-	// 模拟网络延迟
+	// Simulate network latency
 	time.Sleep(m.delay)
 
-	// 检查上下文是否已取消
+	// Check whether the context has been cancelled
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
-	// 返回结果
+	// Return the result
 	versions, ok := m.mockVersions[gemName]
 	if !ok {
 		return nil, errors.New("gem not found")
@@ -115,7 +115,7 @@ func (m *mockRepository) GetGemVersions(ctx context.Context, gemName string) ([]
 	return versions, nil
 }
 
-// 实现其他必要的接口方法（为简化测试，这些方法可以返回空值或错误）
+// Implement other necessary interface methods (to simplify tests, these methods can return empty values or errors)
 func (m *mockRepository) Search(ctx context.Context, query string, page int) ([]*models.PackageInformation, error) {
 	return nil, errors.New("not implemented")
 }
@@ -188,9 +188,9 @@ func (m *mockRepository) GetGemVersionContents(ctx context.Context, gemName, ver
 	return nil, errors.New("not implemented")
 }
 
-// 实现批量操作方法
+// Implement bulk operation methods
 func (m *mockRepository) BulkGetPackages(ctx context.Context, gemNames []string, options *BulkOptions) []*BulkResult[*models.PackageInformation] {
-	// 只检查 options 是否为 nil，不再重新赋值
+	// Only check whether options is nil, do not reassign
 	if options == nil {
 		options = NewBulkOptions()
 	}
@@ -211,7 +211,7 @@ func (m *mockRepository) BulkGetPackages(ctx context.Context, gemNames []string,
 }
 
 func (m *mockRepository) BulkGetVersions(ctx context.Context, gemNames []string, options *BulkOptions) []*BulkResult[[]*models.Version] {
-	// 只检查 options 是否为 nil，不再重新赋值
+	// Only check whether options is nil, do not reassign
 	if options == nil {
 		options = NewBulkOptions()
 	}
@@ -239,15 +239,15 @@ func (m *mockRepository) BulkGetReverseDependencies(ctx context.Context, gemName
 	return nil
 }
 
-// 测试批量获取包信息
+// Test bulk get package info
 func TestBulkGetPackages(t *testing.T) {
-	// 创建模拟仓库
+	// Create a mock repository
 	mockRepo := newMockRepository()
 
-	// 设置一个错误
+	// Set an error
 	mockRepo.setFailOn("not-exist", errors.New("gem not found"))
 
-	// 测试用例
+	// Test cases
 	testCases := []struct {
 		name        string
 		gemNames    []string
@@ -257,7 +257,7 @@ func TestBulkGetPackages(t *testing.T) {
 		expectCount int
 	}{
 		{
-			name:        "获取有效包信息",
+			name:        "get valid package info",
 			gemNames:    []string{"rails", "rack"},
 			concurrency: 2,
 			timeout:     100 * time.Millisecond,
@@ -265,7 +265,7 @@ func TestBulkGetPackages(t *testing.T) {
 			expectCount: 2,
 		},
 		{
-			name:        "包含一个不存在的包",
+			name:        "includes a non-existent package",
 			gemNames:    []string{"rails", "rack", "not-exist"},
 			concurrency: 2,
 			timeout:     100 * time.Millisecond,
@@ -273,10 +273,10 @@ func TestBulkGetPackages(t *testing.T) {
 			expectCount: 3,
 		},
 		{
-			name:        "超时测试",
+			name:        "timeout test",
 			gemNames:    []string{"rails", "rack"},
 			concurrency: 1,
-			timeout:     5 * time.Millisecond, // 设置很短的超时时间
+			timeout:     5 * time.Millisecond, // set a very short timeout
 			expectErr:   true,
 			expectCount: 2,
 		},
@@ -284,22 +284,22 @@ func TestBulkGetPackages(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// 设置上下文和超时时间
+			// Set up context and timeout
 			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
 			defer cancel()
 
-			// 设置并发数
+			// Set concurrency
 			options := NewBulkOptions().WithMaxConcurrency(tc.concurrency)
 
-			// 执行批量获取
+			// Execute bulk get
 			results := mockRepo.BulkGetPackages(ctx, tc.gemNames, options)
 
-			// 验证结果数量
+			// Verify the result count
 			if len(results) != tc.expectCount {
-				t.Errorf("结果数量不符合预期，期望: %d, 实际: %d", tc.expectCount, len(results))
+				t.Errorf("result count does not match expectation, want: %d, got: %d", tc.expectCount, len(results))
 			}
 
-			// 验证是否有错误
+			// Verify whether there is an error
 			hasError := false
 			for _, result := range results {
 				if result.Error != nil {
@@ -309,21 +309,21 @@ func TestBulkGetPackages(t *testing.T) {
 			}
 
 			if hasError != tc.expectErr {
-				t.Errorf("错误状态不符合预期，期望有错误: %v, 实际: %v", tc.expectErr, hasError)
+				t.Errorf("error status does not match expectation, want error: %v, got: %v", tc.expectErr, hasError)
 			}
 		})
 	}
 }
 
-// 测试批量获取版本信息
+// Test bulk get version info
 func TestBulkGetVersions(t *testing.T) {
-	// 创建模拟仓库
+	// Create a mock repository
 	mockRepo := newMockRepository()
 
-	// 设置一个错误
+	// Set an error
 	mockRepo.setFailOn("not-exist", errors.New("gem not found"))
 
-	// 测试用例
+	// Test cases
 	testCases := []struct {
 		name        string
 		gemNames    []string
@@ -333,7 +333,7 @@ func TestBulkGetVersions(t *testing.T) {
 		expectCount int
 	}{
 		{
-			name:        "获取有效版本信息",
+			name:        "get valid version info",
 			gemNames:    []string{"rails", "rack"},
 			concurrency: 2,
 			timeout:     100 * time.Millisecond,
@@ -341,7 +341,7 @@ func TestBulkGetVersions(t *testing.T) {
 			expectCount: 2,
 		},
 		{
-			name:        "包含一个不存在的包",
+			name:        "includes a non-existent package",
 			gemNames:    []string{"rails", "rack", "not-exist"},
 			concurrency: 2,
 			timeout:     100 * time.Millisecond,
@@ -352,22 +352,22 @@ func TestBulkGetVersions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// 设置上下文和超时时间
+			// Set up context and timeout
 			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
 			defer cancel()
 
-			// 设置并发数
+			// Set concurrency
 			options := NewBulkOptions().WithMaxConcurrency(tc.concurrency)
 
-			// 执行批量获取
+			// Execute bulk get
 			results := mockRepo.BulkGetVersions(ctx, tc.gemNames, options)
 
-			// 验证结果数量
+			// Verify the result count
 			if len(results) != tc.expectCount {
-				t.Errorf("结果数量不符合预期，期望: %d, 实际: %d", tc.expectCount, len(results))
+				t.Errorf("result count does not match expectation, want: %d, got: %d", tc.expectCount, len(results))
 			}
 
-			// 验证是否有错误
+			// Verify whether there is an error
 			hasError := false
 			for _, result := range results {
 				if result.Error != nil {
@@ -377,32 +377,32 @@ func TestBulkGetVersions(t *testing.T) {
 			}
 
 			if hasError != tc.expectErr {
-				t.Errorf("错误状态不符合预期，期望有错误: %v, 实际: %v", tc.expectErr, hasError)
+				t.Errorf("error status does not match expectation, want error: %v, got: %v", tc.expectErr, hasError)
 			}
 		})
 	}
 }
 
-// 测试批量操作选项
+// Test bulk operation options
 func TestBulkOptions(t *testing.T) {
-	// 测试默认选项
+	// Test default options
 	options := NewBulkOptions()
 	if options.MaxConcurrency != 10 {
-		t.Errorf("默认最大并发数不正确，期望: %d, 实际: %d", 10, options.MaxConcurrency)
+		t.Errorf("default max concurrency is incorrect, want: %d, got: %d", 10, options.MaxConcurrency)
 	}
 	if !options.ContinueOnError {
-		t.Errorf("默认错误处理策略不正确，期望: %v, 实际: %v", true, options.ContinueOnError)
+		t.Errorf("default error handling strategy is incorrect, want: %v, got: %v", true, options.ContinueOnError)
 	}
 
-	// 测试设置最大并发数
+	// Test setting max concurrency
 	options = NewBulkOptions().WithMaxConcurrency(5)
 	if options.MaxConcurrency != 5 {
-		t.Errorf("设置最大并发数后不正确，期望: %d, 实际: %d", 5, options.MaxConcurrency)
+		t.Errorf("max concurrency is incorrect after setting, want: %d, got: %d", 5, options.MaxConcurrency)
 	}
 
-	// 测试设置错误处理策略
+	// Test setting error handling strategy
 	options = NewBulkOptions().WithContinueOnError(false)
 	if options.ContinueOnError {
-		t.Errorf("设置错误处理策略后不正确，期望: %v, 实际: %v", false, options.ContinueOnError)
+		t.Errorf("error handling strategy is incorrect after setting, want: %v, got: %v", false, options.ContinueOnError)
 	}
 }

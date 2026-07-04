@@ -10,18 +10,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// 测试重试选项的设置
+// Test retry options settings
 func TestRetryOptions(t *testing.T) {
 	opts := NewDefaultRetryOptions()
 
-	// 测试默认值
+	// Test default values
 	assert.Equal(t, DefaultRetryAttempts, opts.MaxAttempts)
 	assert.Equal(t, DefaultRetryWaitTime, opts.WaitTime)
 	assert.Equal(t, DefaultRetryMaxWaitTime, opts.MaxWaitTime)
 	assert.True(t, opts.UseExponentialBackoff)
 	assert.NotNil(t, opts.ShouldRetry)
 
-	// 测试方法链式调用
+	// Test method chaining
 	opts = opts.WithMaxAttempts(5).
 		WithWaitTime(2 * time.Second).
 		WithMaxWaitTime(10 * time.Second).
@@ -33,18 +33,18 @@ func TestRetryOptions(t *testing.T) {
 	assert.False(t, opts.UseExponentialBackoff)
 }
 
-// 测试默认重试条件
+// Test default retry condition
 func TestDefaultShouldRetry(t *testing.T) {
 	opts := NewDefaultRetryOptions()
 
-	// 有错误时应该重试
+	// Should retry when there is an error
 	assert.True(t, opts.ShouldRetry(errors.New("test error")))
 
-	// 没有错误时不应该重试
+	// Should not retry when there is no error
 	assert.False(t, opts.ShouldRetry(nil))
 }
 
-// 模拟请求发送函数，用于测试重试逻辑
+// Simulate a request sending function for testing retry logic
 type mockRequestSender struct {
 	attempts      int
 	maxAttempts   int
@@ -65,158 +65,158 @@ func newMockRequestSender(maxAttempts int) *mockRequestSender {
 }
 
 func (m *mockRequestSender) sendRequest(ctx context.Context, options *requests.Options[any, any]) (any, error) {
-	// 记录请求时间
+	// Record request time
 	m.requestTimes[m.attempts] = time.Now()
 
-	// 如果设置了超时模拟，检查上下文是否已取消
+	// If timeout simulation is set, check whether the context has been cancelled
 	if m.shouldTimeout {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			// 继续执行
+			// continue execution
 		}
 	}
 
-	// 获取当前尝试的预设响应和错误
+	// Get the preset response and error for the current attempt
 	response := m.responses[m.attempts]
 	err := m.errors[m.attempts]
 
-	// 增加尝试次数
+	// Increment the attempt count
 	m.attempts++
 
 	return response, err
 }
 
-// 测试重试机制的行为
+// Test the behavior of the retry mechanism
 func TestSendRequestWithRetry(t *testing.T) {
-	// 测试重试成功的情况
-	t.Run("重试成功", func(t *testing.T) {
-		// 设置模拟发送器，第一次失败，第二次成功
+	// Test the case where retry succeeds
+	t.Run("retry success", func(t *testing.T) {
+		// Set up the mock sender, first attempt fails, second succeeds
 		mock := newMockRequestSender(3)
 		mock.errors[0] = errors.New("first attempt failed")
 		mock.responses[1] = "success"
 		mock.errors[1] = nil
 
-		// 创建重试选项，不使用指数退避
+		// Create retry options, no exponential backoff
 		retryOpts := NewDefaultRetryOptions().
 			WithMaxAttempts(3).
 			WithWaitTime(100 * time.Millisecond).
 			WithExponentialBackoff(false)
 
-		// 执行测试
+		// Execute the test
 		ctx := context.Background()
 		result, err := sendWithMock(ctx, mock, retryOpts)
 
-		// 验证结果
+		// Verify the result
 		assert.NoError(t, err)
 		assert.Equal(t, "success", result)
-		assert.Equal(t, 2, mock.attempts) // 应该只尝试两次
+		assert.Equal(t, 2, mock.attempts) // should only attempt twice
 
-		// 验证重试时间间隔
+		// Verify the retry time interval
 		if mock.attempts >= 2 {
 			interval := mock.requestTimes[1].Sub(mock.requestTimes[0])
-			assert.True(t, interval >= 100*time.Millisecond, "重试间隔应该至少为100ms")
+			assert.True(t, interval >= 100*time.Millisecond, "retry interval should be at least 100ms")
 		}
 	})
 
-	// 测试达到最大重试次数
-	t.Run("达到最大重试次数", func(t *testing.T) {
-		// 设置模拟发送器，所有尝试都失败
+	// Test reaching max retry attempts
+	t.Run("reaching max retry attempts", func(t *testing.T) {
+		// Set up the mock sender, all attempts fail
 		mock := newMockRequestSender(3)
 		for i := 0; i < mock.maxAttempts; i++ {
 			mock.errors[i] = errors.New("attempt failed")
 		}
 
-		// 创建重试选项
+		// Create retry options
 		retryOpts := NewDefaultRetryOptions().
 			WithMaxAttempts(3).
 			WithWaitTime(50 * time.Millisecond).
 			WithExponentialBackoff(false)
 
-		// 执行测试
+		// Execute the test
 		ctx := context.Background()
 		_, err := sendWithMock(ctx, mock, retryOpts)
 
-		// 验证结果
+		// Verify the result
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "max retry attempts reached")
-		assert.Equal(t, 3, mock.attempts) // 应该尝试三次
+		assert.Equal(t, 3, mock.attempts) // should attempt three times
 	})
 
-	// 测试指数退避
-	t.Run("指数退避", func(t *testing.T) {
-		// 设置模拟发送器，所有尝试都失败
+	// Test exponential backoff
+	t.Run("exponential backoff", func(t *testing.T) {
+		// Set up the mock sender, all attempts fail
 		mock := newMockRequestSender(3)
 		for i := 0; i < mock.maxAttempts; i++ {
 			mock.errors[i] = errors.New("attempt failed")
 		}
 
-		// 创建重试选项，使用指数退避
+		// Create retry options, using exponential backoff
 		retryOpts := NewDefaultRetryOptions().
 			WithMaxAttempts(3).
 			WithWaitTime(100 * time.Millisecond).
 			WithExponentialBackoff(true)
 
-		// 执行测试
+		// Execute the test
 		ctx := context.Background()
 		_, _ = sendWithMock(ctx, mock, retryOpts)
 
-		// 验证重试时间间隔，第二次重试间隔应该比第一次长
+		// Verify the retry time interval, the second retry interval should be longer than the first
 		if mock.attempts >= 3 {
 			interval1 := mock.requestTimes[1].Sub(mock.requestTimes[0])
 			interval2 := mock.requestTimes[2].Sub(mock.requestTimes[1])
-			assert.True(t, interval2 > interval1, "指数退避应该使第二次重试间隔比第一次长")
+			assert.True(t, interval2 > interval1, "exponential backoff should make the second retry interval longer than the first")
 		}
 	})
 
-	// 测试上下文取消
-	t.Run("上下文取消", func(t *testing.T) {
-		// 设置模拟发送器
+	// Test context cancellation
+	t.Run("context cancellation", func(t *testing.T) {
+		// Set up the mock sender
 		mock := newMockRequestSender(3)
 		mock.errors[0] = errors.New("first attempt failed")
 		mock.shouldTimeout = true
 
-		// 创建可取消的上下文
+		// Create a cancellable context
 		ctx, cancel := context.WithCancel(context.Background())
 
-		// 在短时间后取消上下文
+		// Cancel the context after a short time
 		go func() {
 			time.Sleep(50 * time.Millisecond)
 			cancel()
 		}()
 
-		// 创建重试选项，等待时间较长
+		// Create retry options, with a longer wait time
 		retryOpts := NewDefaultRetryOptions().
 			WithMaxAttempts(3).
 			WithWaitTime(500 * time.Millisecond).
 			WithExponentialBackoff(false)
 
-		// 执行测试
+		// Execute the test
 		_, err := sendWithMock(ctx, mock, retryOpts)
 
-		// 验证结果
+		// Verify the result
 		assert.Error(t, err)
 		assert.Equal(t, context.Canceled, err)
 	})
 }
 
-// 辅助函数，使用模拟发送器执行重试
+// Helper function, execute retry using the mock sender
 func sendWithMock(ctx context.Context, mock *mockRequestSender, retryOptions *RetryOptions) (interface{}, error) {
-	// 空的请求选项
+	// Empty request options
 	options := &requests.Options[any, any]{}
 
-	// 记录尝试次数
+	// Record attempt count
 	attempts := 0
 	var lastErr error
 	var lastResp interface{}
 
 	for attempts < retryOptions.MaxAttempts {
-		// 如果不是第一次尝试，等待指定时间
+		// If not the first attempt, wait the specified time
 		if attempts > 0 {
 			waitTime := retryOptions.WaitTime
 
-			// 如果使用指数退避
+			// If using exponential backoff
 			if retryOptions.UseExponentialBackoff {
 				factor := 1 << uint(attempts-1)
 				waitTime = time.Duration(float64(waitTime) * float64(factor))
@@ -225,20 +225,20 @@ func sendWithMock(ctx context.Context, mock *mockRequestSender, retryOptions *Re
 				}
 			}
 
-			// 等待
+			// Wait
 			select {
 			case <-time.After(waitTime):
-				// 继续执行
+				// continue execution
 			case <-ctx.Done():
-				// 上下文被取消
+				// context cancelled
 				return nil, ctx.Err()
 			}
 		}
 
-		// 发送请求
+		// Send request
 		resp, err := mock.sendRequest(ctx, options)
 
-		// 检查是否需要重试
+		// Check whether retry is needed
 		if err == nil {
 			return resp, nil
 		}
@@ -248,6 +248,6 @@ func sendWithMock(ctx context.Context, mock *mockRequestSender, retryOptions *Re
 		attempts++
 	}
 
-	// 达到最大重试次数
+	// Max retry attempts reached
 	return lastResp, errors.New("max retry attempts reached: " + lastErr.Error())
 }

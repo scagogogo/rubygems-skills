@@ -10,26 +10,26 @@ import (
 )
 
 // ============================================================
-// 平台检测测试
+// Platform detection tests
 // ============================================================
 
 func TestDetectOS(t *testing.T) {
 	os := detectOS()
-	// 在 Linux 上运行测试时应该是 OSLinux
+	// When running tests on Linux, it should be OSLinux
 	if os == OSUnknown {
-		t.Error("detectOS() 不应返回 OSUnknown")
+		t.Error("detectOS() should not return OSUnknown")
 	}
 }
 
 func TestDetectArch(t *testing.T) {
 	arch := detectArch()
 	if arch == ArchUnknown {
-		t.Error("detectArch() 不应返回 ArchUnknown")
+		t.Error("detectArch() should not return ArchUnknown")
 	}
 }
 
 func TestDetectOSMapping(t *testing.T) {
-	// 测试 GOOS 到 OperatingSystem 的映射关系
+	// Test the mapping from GOOS to OperatingSystem
 	tests := []struct {
 		goos     string
 		expected OperatingSystem
@@ -55,7 +55,7 @@ func TestDetectOSMapping(t *testing.T) {
 				result = OSUnknown
 			}
 			if result != tt.expected {
-				t.Errorf("GOOS=%s 映射 = %v, want %v", tt.goos, result, tt.expected)
+				t.Errorf("GOOS=%s mapping = %v, want %v", tt.goos, result, tt.expected)
 			}
 		})
 	}
@@ -83,7 +83,7 @@ func TestDetectArchValues(t *testing.T) {
 	}
 }
 
-// detectArchFromGOARCH 是测试辅助函数
+// detectArchFromGOARCH is a test helper function
 func detectArchFromGOARCH(goarch string) Architecture {
 	switch goarch {
 	case "amd64":
@@ -100,7 +100,7 @@ func detectArchFromGOARCH(goarch string) Architecture {
 }
 
 // ============================================================
-// /etc/os-release 解析测试
+// /etc/os-release parsing tests
 // ============================================================
 
 func TestParseOSReleaseField(t *testing.T) {
@@ -140,7 +140,7 @@ UBUNTU_CODENAME=jammy`
 }
 
 func TestReadOSRelease(t *testing.T) {
-	// 创建一个临时的 os-release 文件
+	// Create a temporary os-release file
 	tmpDir := t.TempDir()
 	osReleasePath := filepath.Join(tmpDir, "os-release")
 
@@ -210,7 +210,7 @@ ID_LIKE="centos rhel fedora"`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := os.WriteFile(osReleasePath, []byte(tt.content), 0644); err != nil {
-				t.Fatalf("写入测试文件失败: %v", err)
+				t.Fatalf("failed to write test file: %v", err)
 			}
 
 			result := readOSReleaseFromString(string(readFileContent(osReleasePath)))
@@ -221,7 +221,7 @@ ID_LIKE="centos rhel fedora"`,
 	}
 }
 
-// readFileContent 读取文件内容的辅助函数
+// readFileContent is a helper function that reads file contents
 func readFileContent(path string) []byte {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -230,7 +230,7 @@ func readFileContent(path string) []byte {
 	return data
 }
 
-// readOSReleaseFromString 从字符串解析发行版信息（测试用）
+// readOSReleaseFromString parses distro info from a string (for testing)
 func readOSReleaseFromString(data string) LinuxDistro {
 	id := parseOSReleaseField(data, "ID")
 	idLike := parseOSReleaseField(data, "ID_LIKE")
@@ -278,7 +278,7 @@ func readOSReleaseFromString(data string) LinuxDistro {
 }
 
 // ============================================================
-// 版本号提取测试
+// Version number extraction tests
 // ============================================================
 
 func TestExtractVersion(t *testing.T) {
@@ -287,7 +287,7 @@ func TestExtractVersion(t *testing.T) {
 		expected string
 	}{
 		{"ruby 3.2.2 (2023-03-30) [x86_64-linux]", "3.2.2"},
-		{"ruby 2.7.0p183 (2020-03-31) [x86_64-darwin19]", "2.7.0"}, // 注意 p183 不匹配
+		{"ruby 2.7.0p183 (2020-03-31) [x86_64-darwin19]", "2.7.0"}, // note p183 does not match
 		{"3.1.0", "3.1.0"},
 		{"ruby 3.0.0", "3.0.0"},
 		{"", ""},
@@ -312,11 +312,11 @@ func TestIsVersionString(t *testing.T) {
 		{"3.2.2", true},
 		{"2.7.0", true},
 		{"1.0", true},
-		{"3", false}, // 没有点
+		{"3", false}, // no dot
 		{"abc", false},
 		{"", false},
 		{"3.2.2-preview", false},
-		{".1.2", false}, // 以点开头，不是有效版本号
+		{".1.2", false}, // starts with a dot, not a valid version number
 	}
 
 	for _, tt := range tests {
@@ -330,29 +330,29 @@ func TestIsVersionString(t *testing.T) {
 }
 
 // ============================================================
-// 安装选项测试
+// Install options tests
 // ============================================================
 
 func TestNewInstallOptions(t *testing.T) {
 	opts := NewInstallOptions()
 
 	if opts.ForceReinstall != false {
-		t.Error("默认 ForceReinstall 应为 false")
+		t.Error("default ForceReinstall should be false")
 	}
 	if opts.InstallDevHeaders != true {
-		t.Error("默认 InstallDevHeaders 应为 true")
+		t.Error("default InstallDevHeaders should be true")
 	}
 	if opts.InstallBundler != true {
-		t.Error("默认 InstallBundler 应为 true")
+		t.Error("default InstallBundler should be true")
 	}
 	if opts.UpdatePackageIndex != true {
-		t.Error("默认 UpdatePackageIndex 应为 true")
+		t.Error("default UpdatePackageIndex should be true")
 	}
 	if opts.TimeoutSeconds != 600 {
-		t.Error("默认 TimeoutSeconds 应为 600")
+		t.Error("default TimeoutSeconds should be 600")
 	}
 	if opts.UseSudo != true {
-		t.Error("默认 UseSudo 应为 true")
+		t.Error("default UseSudo should be true")
 	}
 }
 
@@ -367,39 +367,39 @@ func TestInstallOptionsChaining(t *testing.T) {
 		WithExtraPackages("libssl-dev", "libffi-dev")
 
 	if !opts.ForceReinstall {
-		t.Error("WithForceReinstall(true) 失败")
+		t.Error("WithForceReinstall(true) failed")
 	}
 	if opts.RubyVersion != "3.2.2" {
-		t.Errorf("WithRubyVersion 失败, got %s", opts.RubyVersion)
+		t.Errorf("WithRubyVersion failed, got %s", opts.RubyVersion)
 	}
 	if opts.InstallDevHeaders {
-		t.Error("WithDevHeaders(false) 失败")
+		t.Error("WithDevHeaders(false) failed")
 	}
 	if opts.InstallBundler {
-		t.Error("WithBundler(false) 失败")
+		t.Error("WithBundler(false) failed")
 	}
 	if opts.TimeoutSeconds != 600 {
-		t.Errorf("WithTimeout(600) 失败, got %d", opts.TimeoutSeconds)
+		t.Errorf("WithTimeout(600) failed, got %d", opts.TimeoutSeconds)
 	}
 	if opts.UseSudo {
-		t.Error("WithSudo(false) 失败")
+		t.Error("WithSudo(false) failed")
 	}
 	if len(opts.ExtraPackages) != 2 {
-		t.Errorf("WithExtraPackages 失败, got %d packages", len(opts.ExtraPackages))
+		t.Errorf("WithExtraPackages failed, got %d packages", len(opts.ExtraPackages))
 	}
 }
 
 // ============================================================
-// Installer 创建和平台检测测试
+// Installer creation and platform detection tests
 // ============================================================
 
 func TestNewInstaller(t *testing.T) {
 	installer := NewInstaller()
 	if installer == nil {
-		t.Error("NewInstaller() 不应返回 nil")
+		t.Error("NewInstaller() should not return nil")
 	}
 	if installer.options == nil {
-		t.Error("Installer.options 不应为 nil")
+		t.Error("Installer.options should not be nil")
 	}
 }
 
@@ -407,10 +407,10 @@ func TestNewInstallerWithCustomOptions(t *testing.T) {
 	opts := NewInstallOptions().WithForceReinstall(true).WithTimeout(120)
 	installer := NewInstaller(opts)
 	if !installer.options.ForceReinstall {
-		t.Error("自定义选项未被应用")
+		t.Error("custom options not applied")
 	}
 	if installer.options.TimeoutSeconds != 120 {
-		t.Error("自定义超时未被应用")
+		t.Error("custom timeout not applied")
 	}
 }
 
@@ -418,18 +418,18 @@ func TestInstallerDetectPlatform(t *testing.T) {
 	installer := NewInstaller()
 	platform, err := installer.DetectPlatform()
 	if err != nil {
-		t.Fatalf("DetectPlatform() 失败: %v", err)
+		t.Fatalf("DetectPlatform() failed: %v", err)
 	}
 
-	// 在 Linux 上运行测试
+	// Running tests on Linux
 	if platform.OS != OSLinux {
-		t.Errorf("在 Linux 上运行测试，但 OS = %v", platform.OS)
+		t.Errorf("running tests on Linux, but OS = %v", platform.OS)
 	}
 	if platform.Arch == ArchUnknown {
-		t.Error("Arch 不应为 Unknown")
+		t.Error("Arch should not be Unknown")
 	}
 	if platform.PackageMgr == PMUnknown {
-		t.Error("PackageMgr 不应为 Unknown")
+		t.Error("PackageMgr should not be Unknown")
 	}
 }
 
@@ -480,17 +480,17 @@ func TestPlatformInfoString(t *testing.T) {
 }
 
 // ============================================================
-// 包管理器检测测试
+// Package manager detection tests
 // ============================================================
 
 func TestDetectLinuxPackageManager(t *testing.T) {
 	tests := []struct {
 		distro      LinuxDistro
-		expectedPMs []PackageManager // 可能匹配多个包管理器
+		expectedPMs []PackageManager // may match multiple package managers
 	}{
 		{DistroUbuntu, []PackageManager{PMApt}},
 		{DistroDebian, []PackageManager{PMApt}},
-		{DistroCentOS, []PackageManager{PMYum, PMDnf}}, // CentOS 可能用 yum 或 dnf
+		{DistroCentOS, []PackageManager{PMYum, PMDnf}}, // CentOS may use yum or dnf
 		{DistroFedora, []PackageManager{PMDnf}},
 		{DistroAlpine, []PackageManager{PMApk}},
 		{DistroArch, []PackageManager{PMPacman}},
@@ -501,8 +501,8 @@ func TestDetectLinuxPackageManager(t *testing.T) {
 		t.Run(string(tt.distro), func(t *testing.T) {
 			pm, _, err := detectLinuxPackageManager(tt.distro)
 			if err != nil {
-				// 如果没有安装对应的包管理器，这是可以接受的
-				t.Logf("detectLinuxPackageManager(%s) 返回错误: %v (可能环境中未安装该包管理器)", tt.distro, err)
+				// If the corresponding package manager is not installed, this is acceptable
+				t.Logf("detectLinuxPackageManager(%s) returned error: %v (the package manager may not be installed in the environment)", tt.distro, err)
 				return
 			}
 			found := false
@@ -513,63 +513,63 @@ func TestDetectLinuxPackageManager(t *testing.T) {
 				}
 			}
 			if !found {
-				t.Errorf("detectLinuxPackageManager(%s) = %v, 期望以下之一: %v", tt.distro, pm, tt.expectedPMs)
+				t.Errorf("detectLinuxPackageManager(%s) = %v, expected one of: %v", tt.distro, pm, tt.expectedPMs)
 			}
 		})
 	}
 }
 
 // ============================================================
-// 命令查找测试
+// Command lookup tests
 // ============================================================
 
 func TestFindCommand(t *testing.T) {
-	// 测试查找一个几乎肯定存在的命令
+	// Test finding a command that almost certainly exists
 	_, err := findCommand("sh")
 	if err != nil {
-		t.Errorf("findCommand('sh') 不应返回错误: %v", err)
+		t.Errorf("findCommand('sh') should not return an error: %v", err)
 	}
 
-	// 测试查找不存在的命令
+	// Test finding a non-existent command
 	_, err = findCommand("nonexistent_command_12345")
 	if err == nil {
-		t.Error("findCommand('nonexistent_command_12345') 应返回错误")
+		t.Error("findCommand('nonexistent_command_12345') should return an error")
 	}
 }
 
 func TestCommandExists(t *testing.T) {
 	if !commandExists("sh") {
-		t.Error("commandExists('sh') 应返回 true")
+		t.Error("commandExists('sh') should return true")
 	}
 	if commandExists("nonexistent_command_12345") {
-		t.Error("commandExists('nonexistent_command_12345') 应返回 false")
+		t.Error("commandExists('nonexistent_command_12345') should return false")
 	}
 }
 
 // ============================================================
-// 文件存在检查测试
+// File existence check tests
 // ============================================================
 
 func TestFileExists(t *testing.T) {
-	// 创建临时文件
+	// Create a temporary file
 	tmpFile := filepath.Join(t.TempDir(), "testfile")
 	if err := os.WriteFile(tmpFile, []byte("test"), 0644); err != nil {
-		t.Fatalf("创建临时文件失败: %v", err)
+		t.Fatalf("failed to create temporary file: %v", err)
 	}
 
 	if !fileExists(tmpFile) {
-		t.Error("fileExists() 对存在的文件应返回 true")
+		t.Error("fileExists() should return true for an existing file")
 	}
 	if fileExists("/nonexistent/path/file.txt") {
-		t.Error("fileExists() 对不存在的文件应返回 false")
+		t.Error("fileExists() should return false for a non-existent file")
 	}
 	if fileExists(t.TempDir()) {
-		t.Error("fileExists() 对目录应返回 false")
+		t.Error("fileExists() should return false for a directory")
 	}
 }
 
 // ============================================================
-// isRootRequired 测试
+// isRootRequired tests
 // ============================================================
 
 func TestIsRootRequired(t *testing.T) {
@@ -600,7 +600,7 @@ func TestIsRootRequired(t *testing.T) {
 }
 
 // ============================================================
-// 安装结果测试
+// Install result tests
 // ============================================================
 
 func TestInstallResultString(t *testing.T) {
@@ -632,28 +632,28 @@ func TestInstallResultString(t *testing.T) {
 		t.Errorf("PackageManager = %s, want apt", result.PackageManager)
 	}
 	if len(result.CommandsRun) != 2 {
-		t.Errorf("CommandsRun 长度 = %d, want 2", len(result.CommandsRun))
+		t.Errorf("CommandsRun length = %d, want 2", len(result.CommandsRun))
 	}
 }
 
 // ============================================================
-// runCommand 测试
+// runCommand tests
 // ============================================================
 
 func TestRunCommand(t *testing.T) {
 	ctx := context.Background()
 	opts := NewInstallOptions().WithTimeout(10)
 
-	// 测试执行一个简单命令
+	// Test executing a simple command
 	err := runCommand(ctx, opts, "echo", "hello")
 	if err != nil {
-		t.Errorf("runCommand('echo hello') 不应返回错误: %v", err)
+		t.Errorf("runCommand('echo hello') should not return an error: %v", err)
 	}
 
-	// 测试执行一个失败的命令
+	// Test executing a failing command
 	err = runCommand(ctx, opts, "false")
 	if err == nil {
-		t.Error("runCommand('false') 应返回错误")
+		t.Error("runCommand('false') should return an error")
 	}
 }
 
@@ -661,22 +661,22 @@ func TestRunCommandTimeout(t *testing.T) {
 	ctx := context.Background()
 	opts := NewInstallOptions().WithTimeout(1)
 
-	// 测试超时
+	// Test timeout
 	err := runCommand(ctx, opts, "sleep", "10")
 	if err == nil {
-		t.Error("runCommand('sleep 10') 应因超时返回错误")
+		t.Error("runCommand('sleep 10') should return an error due to timeout")
 	}
 }
 
 // ============================================================
-// 类型常量测试
+// Type constant tests
 // ============================================================
 
 func TestPackageManagerConstants(t *testing.T) {
 	pms := []PackageManager{PMApt, PMYum, PMDnf, PMApk, PMPacman, PMBrew, PMChoco, PMScoop, PMZypper, PMUnknown}
 	for _, pm := range pms {
 		if pm == "" {
-			t.Error("PackageManager 常量不应为空字符串")
+			t.Error("PackageManager constants should not be empty strings")
 		}
 	}
 }
@@ -690,7 +690,7 @@ func TestLinuxDistroConstants(t *testing.T) {
 	}
 	for _, d := range distros {
 		if d == "" {
-			t.Error("LinuxDistro 常量不应为空字符串")
+			t.Error("LinuxDistro constants should not be empty strings")
 		}
 	}
 }
@@ -699,7 +699,7 @@ func TestOperatingSystemConstants(t *testing.T) {
 	oses := []OperatingSystem{OSLinux, OSDarwin, OSWindows, OSUnknown}
 	for _, os := range oses {
 		if os == "" {
-			t.Error("OperatingSystem 常量不应为空字符串")
+			t.Error("OperatingSystem constants should not be empty strings")
 		}
 	}
 }
@@ -708,72 +708,72 @@ func TestArchitectureConstants(t *testing.T) {
 	archs := []Architecture{ArchAMD64, ArchARM64, ArchARM, Arch386, ArchUnknown}
 	for _, a := range archs {
 		if a == "" {
-			t.Error("Architecture 常量不应为空字符串")
+			t.Error("Architecture constants should not be empty strings")
 		}
 	}
 }
 
 // ============================================================
-// 集成测试（需要网络和包管理器权限）
+// Integration tests (require network and package manager permissions)
 // ============================================================
 
 func TestInstallerIsInstalled(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过集成测试")
+		t.Skip("skip integration test")
 	}
 
 	installer := NewInstaller()
 	installed, info, err := installer.IsInstalled()
 	if err != nil {
-		t.Fatalf("IsInstalled() 返回错误: %v", err)
+		t.Fatalf("IsInstalled() returned error: %v", err)
 	}
 
-	t.Logf("Ruby 安装状态: %v", installed)
+	t.Logf("Ruby installation status: %v", installed)
 	if installed && info != nil {
-		t.Logf("Ruby 版本: %s", info.RubyVersion)
-		t.Logf("gem 版本: %s", info.GemVersion)
-		t.Logf("Ruby 路径: %s", info.RubyPath)
-		t.Logf("gem 路径: %s", info.GemPath)
+		t.Logf("Ruby version: %s", info.RubyVersion)
+		t.Logf("gem version: %s", info.GemVersion)
+		t.Logf("Ruby path: %s", info.RubyPath)
+		t.Logf("gem path: %s", info.GemPath)
 	}
 }
 
-// TestDetectPlatformOnLinux 是一个在 Linux 上的集成测试
+// TestDetectPlatformOnLinux is an integration test on Linux
 func TestDetectPlatformOnLinux(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过集成测试")
+		t.Skip("skip integration test")
 	}
 
 	installer := NewInstaller()
 	platform, err := installer.DetectPlatform()
 	if err != nil {
-		t.Fatalf("DetectPlatform() 失败: %v", err)
+		t.Fatalf("DetectPlatform() failed: %v", err)
 	}
 
-	t.Logf("平台信息: %s", platform)
+	t.Logf("Platform info: %s", platform)
 	t.Logf("  OS: %s", platform.OS)
 	t.Logf("  Arch: %s", platform.Arch)
 	t.Logf("  Distro: %s", platform.Distro)
 	t.Logf("  PackageManager: %s", platform.PackageMgr)
 	t.Logf("  PackageMgrCmd: %s", platform.PackageMgrCmd)
 
-	// 验证平台信息完整性
+	// Verify platform info completeness
 	if platform.OS == OSUnknown {
-		t.Error("OS 不应为 Unknown")
+		t.Error("OS should not be Unknown")
 	}
 	if platform.Arch == ArchUnknown {
-		t.Error("Arch 不应为 Unknown")
+		t.Error("Arch should not be Unknown")
 	}
 }
 
-// TestReadActualOSRelease 读取实际的 /etc/os-release 文件
+// TestReadActualOSRelease reads the actual /etc/os-release file
 func TestReadActualOSRelease(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过集成测试")
+		t.Skip("skip integration test")
 	}
 
 	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {
-		t.Skipf("无法读取 /etc/os-release: %v", err)
+		t.Skipf("cannot read /etc/os-release: %v", err)
 	}
 
 	id := parseOSReleaseField(string(data), "ID")
@@ -781,79 +781,79 @@ func TestReadActualOSRelease(t *testing.T) {
 	name := parseOSReleaseField(string(data), "NAME")
 	version := parseOSReleaseField(string(data), "VERSION")
 
-	t.Logf("实际系统信息:")
+	t.Logf("Actual system info:")
 	t.Logf("  ID: %s", id)
 	t.Logf("  ID_LIKE: %s", idLike)
 	t.Logf("  NAME: %s", name)
 	t.Logf("  VERSION: %s", version)
 
 	distro := readOSRelease()
-	t.Logf("  检测到的发行版: %s", distro)
+	t.Logf("  Detected distro: %s", distro)
 
 	if distro == DistroUnknown {
-		t.Error("readOSRelease() 在实际 Linux 系统上不应返回 DistroUnknown")
+		t.Error("readOSRelease() should not return DistroUnknown on an actual Linux system")
 	}
 }
 
-// TestGetCommandOutput 测试获取命令输出
+// TestGetCommandOutput tests getting command output
 func TestGetCommandOutput(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过集成测试")
+		t.Skip("skip integration test")
 	}
 
-	// 测试 echo 命令
+	// Test the echo command
 	output, err := getCommandOutput("echo", "hello world")
 	if err != nil {
-		t.Fatalf("getCommandOutput('echo') 失败: %v", err)
+		t.Fatalf("getCommandOutput('echo') failed: %v", err)
 	}
 	if strings.TrimSpace(output) != "hello world" {
 		t.Errorf("getCommandOutput('echo hello world') = %q, want 'hello world'", output)
 	}
 }
 
-// TestCheckRubyInstalledIntegration 测试实际的 Ruby 安装检测
+// TestCheckRubyInstalledIntegration tests actual Ruby installation detection
 func TestCheckRubyInstalledIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过集成测试")
+		t.Skip("skip integration test")
 	}
 
 	installed, info, err := checkRubyInstalled()
 	if err != nil {
-		t.Fatalf("checkRubyInstalled() 返回错误: %v", err)
+		t.Fatalf("checkRubyInstalled() returned error: %v", err)
 	}
 
 	if installed {
-		t.Logf("Ruby 已安装: %s (gem: %s)", info.RubyVersion, info.GemVersion)
-		// 验证版本号格式
+		t.Logf("Ruby installed: %s (gem: %s)", info.RubyVersion, info.GemVersion)
+		// Verify version number format
 		if !isVersionString(info.RubyVersion) {
-			t.Errorf("Ruby 版本号格式异常: %s", info.RubyVersion)
+			t.Errorf("Ruby version number format is abnormal: %s", info.RubyVersion)
 		}
 		if info.GemVersion != "" && !isVersionString(info.GemVersion) {
-			t.Errorf("gem 版本号格式异常: %s", info.GemVersion)
+			t.Errorf("gem version number format is abnormal: %s", info.GemVersion)
 		}
 	} else {
-		t.Log("Ruby 未安装")
+		t.Log("Ruby not installed")
 	}
 }
 
-// TestFindCommandIntegration 测试实际命令查找
+// TestFindCommandIntegration tests actual command lookup
 func TestFindCommandIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过集成测试")
+		t.Skip("skip integration test")
 	}
 
-	// 测试常见命令
+	// Test common commands
 	commonCmds := []string{"ls", "cat", "sh", "bash"}
 	for _, cmd := range commonCmds {
 		path, err := findCommand(cmd)
 		if err != nil {
-			t.Logf("命令 %s 未找到", cmd)
+			t.Logf("command %s not found", cmd)
 			continue
 		}
-		t.Logf("命令 %s 位于: %s", cmd, path)
+		t.Logf("command %s located at: %s", cmd, path)
 	}
 
-	// 测试包管理器命令
+	// Test package manager commands
 	pmCmds := []string{"apt-get", "apt", "yum", "dnf", "apk", "pacman", "brew", "zypper"}
 	foundPMs := []string{}
 	for _, cmd := range pmCmds {
@@ -861,62 +861,62 @@ func TestFindCommandIntegration(t *testing.T) {
 			foundPMs = append(foundPMs, cmd)
 		}
 	}
-	t.Logf("找到的包管理器: %v", foundPMs)
+	t.Logf("Found package managers: %v", foundPMs)
 	if len(foundPMs) == 0 {
-		t.Log("警告: 未找到任何包管理器")
+		t.Log("warning: no package manager found")
 	}
 }
 
 // ============================================================
-// Mock 测试 (不需要 root 权限)
+// Mock tests (do not require root permissions)
 // ============================================================
 
-// TestInstallViaAptDryRun 模拟 apt 安装（dry run）
+// TestInstallViaAptDryRun simulates an apt install (dry run)
 func TestInstallViaAptDryRun(t *testing.T) {
-	// 使用 echo 命令模拟 apt-get
-	// 这需要创建一个假的 apt-get 脚本
+	// Use the echo command to simulate apt-get
+	// This requires creating a fake apt-get script
 	tmpDir := t.TempDir()
 	fakeAptGet := filepath.Join(tmpDir, "apt-get")
 	if err := os.WriteFile(fakeAptGet, []byte("#!/bin/sh\necho apt-get $@\nexit 0"), 0755); err != nil {
-		t.Fatalf("创建假 apt-get 失败: %v", err)
+		t.Fatalf("failed to create fake apt-get: %v", err)
 	}
 
-	// 修改 PATH 包含我们的临时目录
+	// Modify PATH to include our temporary directory
 	origPath := os.Getenv("PATH")
  newPath := tmpDir + ":" + origPath
 	if err := os.Setenv("PATH", newPath); err != nil {
-		t.Fatalf("设置 PATH 失败: %v", err)
+		t.Fatalf("failed to set PATH: %v", err)
 	}
 	defer os.Setenv("PATH", origPath)
 
-	// 验证假命令可用
+	// Verify the fake command is available
 	path, err := exec.LookPath("apt-get")
 	if err != nil {
-		t.Fatalf("假 apt-get 不可用: %v", err)
+		t.Fatalf("fake apt-get not available: %v", err)
 	}
-	t.Logf("使用假 apt-get: %s", path)
+	t.Logf("Using fake apt-get: %s", path)
 }
 
-// TestInstallAlreadyInstalled 测试已安装时跳过安装
+// TestInstallAlreadyInstalled tests skipping installation when already installed
 func TestInstallAlreadyInstalled(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过集成测试")
+		t.Skip("skip integration test")
 	}
 
-	// 先检查 Ruby 是否已安装
+	// First check whether Ruby is already installed
 	installed, _, _ := checkRubyInstalled()
 	if !installed {
-		t.Skip("Ruby 未安装，跳过此测试")
+		t.Skip("Ruby not installed, skip this test")
 	}
 
 	installer := NewInstaller()
 	result, err := installer.Install(context.Background())
 	if err != nil {
-		t.Fatalf("Install() 失败: %v", err)
+		t.Fatalf("Install() failed: %v", err)
 	}
 
 	if !result.AlreadyInstalled {
-		t.Error("Ruby 已安装但返回 AlreadyInstalled=false")
+		t.Error("Ruby is installed but returned AlreadyInstalled=false")
 	}
-	t.Logf("Ruby 已安装: %s (gem: %s)", result.RubyVersion, result.GemVersion)
+	t.Logf("Ruby installed: %s (gem: %s)", result.RubyVersion, result.GemVersion)
 }

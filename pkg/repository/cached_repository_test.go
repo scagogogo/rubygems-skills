@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// 模拟Repository用于测试
+// Mock Repository for testing
 type MockRepo struct {
 	calledTimes int
 	testPkg     *models.PackageInformation
@@ -27,13 +27,13 @@ func NewMockRepo() *MockRepo {
 	}
 }
 
-// 实现Repository接口的必要方法
+// Implement the necessary methods of the Repository interface
 func (m *MockRepo) GetPackage(ctx context.Context, gemName string) (*models.PackageInformation, error) {
 	m.calledTimes++
 	return m.testPkg, nil
 }
 
-// 为了满足Repository接口，需要实现的其他方法
+// Other methods that need to be implemented to satisfy the Repository interface
 func (m *MockRepo) Search(ctx context.Context, query string, page int) ([]*models.PackageInformation, error) {
 	return nil, nil
 }
@@ -118,7 +118,7 @@ func (m *MockRepo) GetMFAStatus(ctx context.Context) (*models.MFAStatus, error) 
 	return nil, nil
 }
 
-// 实现批量操作方法
+// Implement bulk operation methods
 func (m *MockRepo) BulkGetPackages(ctx context.Context, gemNames []string, options *BulkOptions) []*BulkResult[*models.PackageInformation] {
 	return nil
 }
@@ -139,10 +139,10 @@ func TestCachedRepository(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := NewMockRepo()
 
-	// 创建一个内存缓存
+	// Create an in-memory cache
 	memCache := cache.NewMemoryCache(10*time.Minute, 30*time.Minute)
 
-	// 创建一个测试包装器
+	// Create a test wrapper
 	type testWrapper struct {
 		repo      *MockRepo
 		cache     cache.Cache
@@ -157,36 +157,36 @@ func TestCachedRepository(t *testing.T) {
 		},
 	}
 
-	// 测试不使用缓存的情况
+	// Test the case without using cache
 	for i := 0; i < 3; i++ {
 		pkg, err := wrapper.repo.GetPackage(ctx, "test-gem")
 		assert.NoError(t, err)
 		assert.Equal(t, "test-gem", pkg.Name)
 	}
 
-	// 应该被调用3次
+	// Should be called 3 times
 	assert.Equal(t, 3, wrapper.getCalled())
 
-	// 创建新的mock和缓存仓库
+	// Create a new mock and cached repository
 	mockRepo2 := NewMockRepo()
-	// 使用我们的Mock作为底层仓库
+	// Use our Mock as the underlying repository
 	cacheRepo := NewCachedRepository(mockRepo2, 10*time.Minute, memCache)
 
-	// 首次调用，应该会调用底层仓库
+	// First call should invoke the underlying repository
 	pkg, err := cacheRepo.GetPackage(ctx, "test-gem")
 	assert.NoError(t, err)
 	assert.Equal(t, "test-gem", pkg.Name)
 	assert.Equal(t, 1, mockRepo2.calledTimes)
 
-	// 第二次调用，应该从缓存获取
+	// Second call should get from cache
 	cachedPkg, err := cacheRepo.GetPackage(ctx, "test-gem")
 	assert.NoError(t, err)
 	assert.Equal(t, "test-gem", cachedPkg.Name)
 
-	// mock仍然只被调用了一次
+	// mock should still only be called once
 	assert.Equal(t, 1, mockRepo2.calledTimes)
 
-	// 清理
+	// Cleanup
 	cacheRepo.ClearCache()
 	cacheRepo.Close()
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// ===== URL 构造验证测试 =====
+// ===== URL construction verification tests =====
 
 func TestRepository_GetVersionReverseDependencies_URL(t *testing.T) {
 	repo := NewRepository()
@@ -47,16 +47,16 @@ func TestWriteRepository_GetAPIKey_URL(t *testing.T) {
 	assert.Equal(t, expectedURL, actualURL)
 }
 
-// ===== URL 编码测试 =====
+// ===== URL encoding tests =====
 
 func TestRepository_URLPathEscape(t *testing.T) {
 	repo := NewRepository()
 
-	// 包名含特殊字符时应正确编码
+	// Package name with special characters should be encoded correctly
 	actualURL := fmt.Sprintf("%s/api/v1/gems/%s.json", repo.options.ServerURL, url.PathEscape("my-gem"))
 	assert.Equal(t, "https://rubygems.org/api/v1/gems/my-gem.json", actualURL)
 
-	// 包名含空格时应编码
+	// Package name with spaces should be encoded
 	actualURL = fmt.Sprintf("%s/api/v1/gems/%s.json", repo.options.ServerURL, url.PathEscape("my gem"))
 	assert.Equal(t, "https://rubygems.org/api/v1/gems/my%20gem.json", actualURL)
 }
@@ -64,12 +64,12 @@ func TestRepository_URLPathEscape(t *testing.T) {
 func TestRepository_URLQueryEscape(t *testing.T) {
 	repo := NewRepository()
 
-	// 搜索查询含特殊字符时应正确编码
+	// Search query with special characters should be encoded correctly
 	actualURL := fmt.Sprintf("%s/api/v1/search.json?query=%s&page=%d", repo.options.ServerURL, url.QueryEscape("rails & rack"), 1)
 	assert.Equal(t, "https://rubygems.org/api/v1/search.json?query=rails+%26+rack&page=1", actualURL)
 }
 
-// ===== CachedRepository 新方法测试 =====
+// ===== CachedRepository new method tests =====
 
 func TestCachedRepository_GetVersionReverseDependencies(t *testing.T) {
 	ctx := context.Background()
@@ -77,12 +77,12 @@ func TestCachedRepository_GetVersionReverseDependencies(t *testing.T) {
 	memCache := cache.NewMemoryCache(10*time.Minute, 30*time.Minute)
 	cacheRepo := NewCachedRepository(mockRepo, 10*time.Minute, memCache)
 
-	// 调用缓存包装的方法
+	// Call the cache-wrapped method
 	deps, err := cacheRepo.GetVersionReverseDependencies(ctx, "rails-7.0.5")
 	assert.NoError(t, err)
 	assert.Nil(t, deps)
 
-	// 清理
+	// Cleanup
 	cacheRepo.ClearCache()
 	cacheRepo.Close()
 }
@@ -93,17 +93,17 @@ func TestCachedRepository_GetMFAStatus(t *testing.T) {
 	memCache := cache.NewMemoryCache(10*time.Minute, 30*time.Minute)
 	cacheRepo := NewCachedRepository(mockRepo, 10*time.Minute, memCache)
 
-	// 调用缓存包装的方法
+	// Call the cache-wrapped method
 	status, err := cacheRepo.GetMFAStatus(ctx)
 	assert.NoError(t, err)
 	assert.Nil(t, status)
 
-	// 清理
+	// Cleanup
 	cacheRepo.ClearCache()
 	cacheRepo.Close()
 }
 
-// ===== 模型构造测试 =====
+// ===== Model construction tests =====
 
 func TestCreateAPIKeyRequest_FormEncoding(t *testing.T) {
 	req := &models.CreateAPIKeyRequest{
@@ -122,7 +122,7 @@ func TestCreateAPIKeyRequest_FormEncoding(t *testing.T) {
 	encoded := form.Encode()
 	assert.Contains(t, encoded, "name=my-key")
 	assert.Contains(t, encoded, "mfa=enabled")
-	// scopes 应该出现两次
+	// scopes should appear twice
 	assert.Contains(t, encoded, "scopes%5B%5D=index_rubygems")
 	assert.Contains(t, encoded, "scopes%5B%5D=push_rubygem")
 }
@@ -146,7 +146,7 @@ func TestUpdateAPIKeyRequest_FormEncoding(t *testing.T) {
 	assert.Contains(t, encoded, "mfa=disabled")
 }
 
-// ===== API 集成测试 (需要网络，short 模式下跳过) =====
+// ===== API integration tests (require network, skipped in short mode) =====
 
 func TestRepository_GetVersionReverseDependencies_API(t *testing.T) {
 	if testing.Short() {
@@ -158,20 +158,20 @@ func TestRepository_GetVersionReverseDependencies_API(t *testing.T) {
 
 	repo := NewRepository()
 
-	t.Run("版本反向依赖", func(t *testing.T) {
-		// 使用 full_name 格式
+	t.Run("version reverse dependencies", func(t *testing.T) {
+		// Use the full_name format
 		dependencies, err := repo.GetVersionReverseDependencies(ctx, "rack-2.2.7")
 
 		if err != nil {
 			if !IsNotFound(err) {
-				t.Logf("获取版本反向依赖返回错误: %v", err)
+				t.Logf("getting version reverse dependencies returned error: %v", err)
 			}
 			return
 		}
 
-		assert.NotNil(t, dependencies, "反向依赖列表不应为nil")
+		assert.NotNil(t, dependencies, "reverse dependencies list should not be nil")
 		if len(dependencies) > 0 {
-			t.Logf("rack-2.2.7 的版本级别反向依赖数量: %d", len(dependencies))
+			t.Logf("number of version-level reverse dependencies for rack-2.2.7: %d", len(dependencies))
 		}
 	})
 }
@@ -181,10 +181,10 @@ func TestRepository_GetMFAStatus_API(t *testing.T) {
 		t.Skip("Skipping API test in short mode")
 	}
 
-	// MFA 状态需要 API Token，未设置时跳过
+	// MFA status requires an API Token, skip when not set
 	token := ""
 	if token == "" {
-		t.Skip("未设置 API Token，跳过 MFA 状态测试")
+		t.Skip("API Token not set, skip MFA status test")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -194,6 +194,6 @@ func TestRepository_GetMFAStatus_API(t *testing.T) {
 	repo := NewRepository(opts)
 
 	status, err := repo.GetMFAStatus(ctx)
-	assert.NoError(t, err, "获取 MFA 状态不应返回错误")
-	assert.NotNil(t, status, "MFA 状态不应为nil")
+	assert.NoError(t, err, "getting MFA status should not return an error")
+	assert.NotNil(t, status, "MFA status should not be nil")
 }
