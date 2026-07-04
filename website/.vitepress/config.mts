@@ -8,6 +8,9 @@ export default withMermaid(
   title: 'rubygems-skills',
   description: 'A production-ready Go SDK for the RubyGems.org API — built for AI agents.',
 
+  // Source directory: docs/ (so index.md becomes the home page)
+  srcDir: 'docs',
+
   // GitHub Pages project site: https://<user>.github.io/rubygems-skills/
   base: '/rubygems-skills/',
 
