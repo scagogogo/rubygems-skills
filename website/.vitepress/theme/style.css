@@ -1,0 +1,56 @@
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: -webkit-linear-gradient(120deg, #cc342d 30%, #7c3aed);
+  --vp-home-hero-image-background-image: linear-gradient(-45deg, #bd34fe 50%, #cc342d 50%);
+  --vp-home-hero-image-filter: blur(30px);
+
+  --vp-button-brand-bg: #cc342d;
+  --vp-button-brand-hover-bg: #b02b25;
+  --vp-button-brand-border: transparent;
+
+  --vp-c-brand-1: #cc342d;
+  --vp-c-brand-2: #b02b25;
+  --vp-c-brand-3: #cc342d;
+}
+
+.dark {
+  --vp-home-hero-image-background-image: linear-gradient(-45deg, #a855f7 50%, #cc342d 50%);
+}
+
+/* Prompt card styling */
+.prompt-card {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  background: var(--vp-c-bg-soft);
+}
+
+.prompt-card .prompt-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/*
+ * Mermaid diagrams: the plugin forces `theme: "dark"` when the site is in dark
+ * mode, but mermaid's built-in dark theme renders near-black text on a dark
+ * background (rgb(31,32,32) on dark), which is unreadable. Override the SVG's
+ * inline fills so node/edge labels stay legible in both themes.
+ */
+.dark .mermaid svg text {
+  fill: rgba(235, 235, 245, 0.9) !important;
+}
+.dark .mermaid svg .edgeLabel,
+.dark .mermaid svg .nodeLabel,
+.dark .mermaid svg .cluster-label {
+  color: rgba(235, 235, 245, 0.9) !important;
+  fill: rgba(235, 235, 245, 0.9) !important;
+}
+/* keep node backgrounds slightly translucent so colored fills still read */
+.dark .mermaid svg rect,
+.dark .mermaid svg polygon {
+  stroke: rgba(235, 235, 245, 0.35) !important;
+}
