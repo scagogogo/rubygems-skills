@@ -2,9 +2,9 @@
 .idea/
 .vscode/
 
-# Compiled binaries
-rubygems
-rubygems-cli
+# Compiled binaries (root-level only — don't ignore cmd/rubygems/)
+/rubygems
+/rubygems-cli
 
 # OS generated files
 .DS_Store

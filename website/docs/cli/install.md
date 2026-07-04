@@ -1,6 +1,6 @@
 # CLI Installation
 
-The repo ships a command-line tool under `cmd/rubygems` — query gems, list versions, search, and auto-install Ruby, all from the terminal. Useful for quick lookups, shell scripts, and CI.
+The repo ships a command-line tool under `cmd/rubygems` — built on [cobra](https://github.com/spf13/cobra), it exposes the entire SDK: read queries, bulk operations, write operations, and the Ruby/RubyGems auto-installer.
 
 ```mermaid
 flowchart TD
@@ -11,7 +11,7 @@ flowchart TD
     GoInstall --> Path["ensure $GOPATH/bin\non $PATH"]
     GoRun --> NoPath["no PATH setup needed"]
     Build --> Local["run ./rubygems locally"]
-    Path & NoPath & Local --> Verify["rubygems -get -gem rails\n→ verify it works"]
+    Path & NoPath & Local --> Verify["rubygems get rails\n→ verify it works"]
 
     classDef method fill:#7c3aed22,stroke:#7c3aed,color:#fff
     classDef ok fill:#16a34a22,stroke:#16a34a,color:#fff
@@ -29,7 +29,7 @@ This puts a `rubygems` binary on your `$GOPATH/bin` (or `$GOBIN`). Make sure tha
 
 ```bash
 export PATH="$PATH:$(go env GOPATH)/bin"
-rubygems -help
+rubygems --help
 ```
 
 ## Build from source
@@ -38,36 +38,36 @@ rubygems -help
 git clone https://github.com/scagogogo/rubygems-skills.git
 cd rubygems-skills
 go build -o rubygems ./cmd/rubygems
-./rubygems -help
+./rubygems --help
 ```
 
 ## Verify
 
 ```bash
-rubygems -get -gem rails
+rubygems get rails
 ```
 
 You should see the rails gem's name, version, and download count.
 
-## What it can do
+## Command groups
 
-| Subcommand (flag) | Action |
-|---|---|
-| `-get -gem NAME` | Get package info |
-| `-search -query QUERY` | Search packages |
-| `-versions -gem NAME` | List versions |
-| `-deps -gem NAME` | Show dependencies |
-| `-rdeps -gem NAME` | Show reverse dependencies |
-| `-install` | Auto-install Ruby/RubyGems on this machine |
+The CLI is organized into four groups of subcommands:
 
-Plus output/format/mirror flags (`-json`, `-cache`, `-mirror`, `-limit`). See [Commands](./commands).
+| Group | Commands | Auth |
+|---|---|---|
+| **Read** | `get`, `search`, `autocomplete`, `versions`, `latest-version`, `version-detail`, `version-contents`, `downloads`, `version-downloads`, `top-downloads`, `deps`, `rdeps`, `version-rdeps`, `latest-gems`, `just-updated`, `user-profile`, `owned-gems`, `gems-by-owner`, `gem-owners`, `attestations`, `mfa-status`, `timeframe` | optional `--token` |
+| **Bulk** | `bulk-get`, `bulk-versions`, `bulk-deps`, `bulk-rdeps` | optional `--token` |
+| **Write** | `push`, `yank`, `add-owner`, `remove-owner`, `update-owner`, `list-webhooks`, `create-webhook`, `delete-webhook`, `fire-webhook`, `get-api-key`, `create-api-key`, `update-api-key`, `my-profile` | `--token` or HTTP Basic |
+| **Install** | `install`, `platform` | none |
+
+Global flags (`--mirror`, `--server`, `--token`, `--proxy`, `--timeout`, `--json`, `--cache`, `--retry`) apply to most commands. See [Commands](./commands).
 
 ## No install? Use `go run`
 
 You can skip the binary entirely and run it on the fly:
 
 ```bash
-go run github.com/scagogogo/rubygems-skills/cmd/rubygems@latest -get -gem rails
+go run github.com/scagogogo/rubygems-skills/cmd/rubygems@latest get rails
 ```
 
 ---

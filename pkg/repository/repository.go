@@ -81,6 +81,11 @@ type Repository interface {
 
 	// GetDependencies get dependencies of specified gem
 	// GET /api/v1/dependencies?gems={comma-separated-names}
+	//
+	// DEPRECATED: RubyGems.org shut down the dependency API on 2023-02-22.
+	// See https://blog.rubygems.org/2023/02/22/dependency-api-deprecation.html
+	// This endpoint now returns 404. Use the gem's version detail (GetGemVersionDetail,
+	// API v2) or the compact index API instead. Retained for backward compatibility.
 	GetDependencies(ctx context.Context, gemsNames ...string) ([]*models.DependencyInfo, error)
 
 	// GetReverseDependencies get all packages depending on specified gem

@@ -139,11 +139,16 @@ grep -q '^go 1\.\(2[1-9]\|[3-9]\)' go.mod  # ensure Go >= 1.21
 go get github.com/scagogogo/rubygems-skills@latest
 ```
 
-**Step 3 — Verify it compiles** (catches version/Go mismatches immediately):
+> After `go get`, the module is recorded as `// indirect` in `go.mod` until you import a package. The next step handles that automatically.
+
+**Step 3 — Verify it compiles** (catches version/Go mismatches immediately and records transitive deps in `go.sum`):
 
 ```bash
-go build ./...
+# Write a one-line main.go that imports the SDK, then:
+go mod tidy && go build ./...
 ```
+
+If `go build ./...` reports `missing go.sum entry for ... go-requests`, run `go mod tidy` — it pulls the transitive dependency (`github.com/crawler-go-go-go/go-requests`) into `go.sum`. This is expected on first import.
 
 **Step 4 — (Optional) Auto-install Ruby/RubyGems on the host.** Only needed if the agent's workflow itself executes `gem`/`ruby` binaries — not needed to call the SDK.
 
@@ -173,8 +178,8 @@ inst := install.NewInstaller(opts)
 **Step 5 — (Optional) Build the bundled CLI** for ad-hoc inspection from a shell:
 
 ```bash
-go build -o rubygems-cli ./cmd/rubygems/
-./rubygems-cli -get -gem rails -json
+go build -o rubygems ./cmd/rubygems/
+./rubygems get rails --json
 ```
 
 ---
@@ -411,19 +416,91 @@ suggestions, err := repo.SearchAutocomplete(ctx, "rails")
 
 ## CLI Tool
 
-```bash
-go build -o rubygems-cli ./cmd/rubygems/
+The CLI is built on [cobra](https://github.com/spf13/cobra) and exposes the full SDK as subcommands. Global flags (`--mirror`, `--token`, `--proxy`, `--cache`, `--retry`, `--json`, `--timeout`) apply to most commands.
 
-./rubygems-cli -get -gem rails          # Get package info
-./rubygems-cli -search -query rails     # Search packages
-./rubygems-cli -versions -gem rails     # List versions
-./rubygems-cli -deps -gem rails         # Show dependencies
-./rubygems-cli -rdeps -gem rails        # Show reverse dependencies
-./rubygems-cli -get -gem rails -json    # JSON output
-./rubygems-cli -get -gem rails -mirror ruby-china  # Use mirror
-./rubygems-cli -install                 # Auto-install Ruby/RubyGems
-./rubygems-cli -help                    # Help
+```bash
+go build -o rubygems ./cmd/rubygems/
 ```
+
+### Read commands
+
+```bash
+./rubygems get rails                         # package info
+./rubygems search rails --limit 10           # search
+./rubygems autocomplete rail                 # autocomplete suggestions
+./rubygems versions rails --limit 20         # version list
+./rubygems latest-version rails              # latest version
+./rubygems version-detail rails 8.1.3        # v2 detailed version info
+./rubygems version-contents rails 8.1.3      # v2 file checksums
+./rubygems downloads                         # total repo downloads
+./rubygems version-downloads rails 8.1.3     # version download count
+./rubygems top-downloads --limit 10          # top downloaded gems
+./rubygems deps rails rack                   # dependencies (deprecated API)
+./rubygems rdeps rack --limit 50             # reverse dependencies
+./rubygems version-rdeps rack-2.2.7          # version-level reverse deps
+./rubygems latest-gems                       # recently published
+./rubygems just-updated                      # recently updated
+./rubygems user-profile qrush                # user profile
+./rubygems owned-gems                        # your gems (--token)
+./rubygems gems-by-owner qrush               # gems by owner
+./rubygems gem-owners rails                  # gem owners
+./rubygems attestations rails 8.1.3          # sigstore attestations
+./rubygems mfa-status                        # MFA status (--token)
+```
+
+### Bulk commands
+
+```bash
+./rubygems bulk-get rails rack bundler --concurrency 5
+./rubygems bulk-versions rails,rack --concurrency 3
+./rubygems bulk-deps rails,rack
+./rubygems bulk-rdeps rails,rack
+```
+
+### Write commands (require `--token` or HTTP Basic auth)
+
+```bash
+./rubygems push ./my-gem-1.0.0.gem                              # publish a gem
+./rubygems yank my-gem 1.0.0                                     # yank a version
+./rubygems yank my-gem 1.0.0 --platform x86_64-linux            # yank with platform
+./rubygems add-owner my-gem user@example.com --role owner        # add owner
+./rubygems remove-owner my-gem user@example.com                  # remove owner
+./rubygems update-owner my-gem user@example.com --role owner     # update owner role
+./rubygems list-webhooks                                         # list webhooks
+./rubygems create-webhook my-gem https://example.com/hook        # create webhook
+./rubygems delete-webhook my-gem https://example.com/hook        # delete webhook
+./rubygems fire-webhook my-gem https://example.com/hook          # test-fire webhook
+./rubygems get-api-key --user name                               # retrieve API key (Basic)
+./rubygems create-api-key --user name --name ci --scopes push_rubygem,yank_rubygem
+./rubygems update-api-key --user name --api-key KEY --scopes index_rubygems
+./rubygems my-profile --user name                                # full profile (Basic)
+```
+
+### Auto-install command
+
+```bash
+./rubygems install                 # auto-install Ruby/RubyGems
+./rubygems install --force         # force reinstall
+./rubygems install --no-dev --no-bundler
+./rubygems platform                # detect OS/distro/package manager
+```
+
+### Global options
+
+```bash
+./rubygems get rails --json                  # JSON output
+./rubygems get rails --mirror ruby-china     # use a mirror
+./rubygems get rails --cache                 # enable in-memory cache
+./rubygems get rails --token $RUBYGEMS_TOKEN # authenticate
+./rubygems get rails --proxy http://127.0.0.1:7890   # HTTP proxy
+./rubygems get rails --retry --retry-attempts 5      # retry with backoff
+./rubygems get rails --timeout 60                    # request timeout (seconds)
+./rubygems get rails --server https://gems.example.com  # custom server
+```
+
+> **Mirror note:** Only the official source and `ruby-china` provide the RubyGems.org API. The `tsinghua` and `aliyun` mirrors only serve gem files and will return 404 for API calls.
+
+Run `./rubygems --help` or `./rubygems <command> --help` for full usage.
 
 ---
 

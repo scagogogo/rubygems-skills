@@ -139,11 +139,16 @@ grep -q '^go 1\.\(2[1-9]\|[3-9]\)' go.mod  # 确认 Go >= 1.21
 go get github.com/scagogogo/rubygems-skills@latest
 ```
 
-**第 3 步 — 验证编译**（立即捕获版本/Go 不匹配）：
+> `go get` 之后，模块在 `go.mod` 中会先标记为 `// indirect`，直到你真正 import 某个包。下一步会自动处理。
+
+**第 3 步 — 验证编译**（立即捕获版本/Go 不匹配，并把传递依赖写入 `go.sum`）：
 
 ```bash
-go build ./...
+# 写一个 import 了 SDK 的 main.go，然后：
+go mod tidy && go build ./...
 ```
+
+如果 `go build ./...` 报 `missing go.sum entry for ... go-requests`，执行 `go mod tidy` 即可——它会将传递依赖（`github.com/crawler-go-go-go/go-requests`）写入 `go.sum`。首次导入时这是预期行为。
 
 **第 4 步 —（可选）在主机上自动安装 Ruby/RubyGems。** 仅当 Agent 的工作流本身要执行 `gem`/`ruby` 二进制时才需要——调用 SDK 不需要。
 
@@ -173,8 +178,8 @@ inst := install.NewInstaller(opts)
 **第 5 步 —（可选）构建内置 CLI**，便于从 shell 临时查询：
 
 ```bash
-go build -o rubygems-cli ./cmd/rubygems/
-./rubygems-cli -get -gem rails -json
+go build -o rubygems ./cmd/rubygems/
+./rubygems get rails --json
 ```
 
 ---
@@ -411,19 +416,91 @@ suggestions, err := repo.SearchAutocomplete(ctx, "rails")
 
 ## 命令行工具
 
-```bash
-go build -o rubygems-cli ./cmd/rubygems/
+CLI 基于 [cobra](https://github.com/spf13/cobra) 构建，将整个 SDK 暴露为子命令。全局 flag（`--mirror`、`--token`、`--proxy`、`--cache`、`--retry`、`--json`、`--timeout`）适用于绝大多数命令。
 
-./rubygems-cli -get -gem rails          # 获取包信息
-./rubygems-cli -search -query rails     # 搜索包
-./rubygems-cli -versions -gem rails     # 列出版本
-./rubygems-cli -deps -gem rails         # 查看依赖
-./rubygems-cli -rdeps -gem rails        # 查看反向依赖
-./rubygems-cli -get -gem rails -json    # JSON 输出
-./rubygems-cli -get -gem rails -mirror ruby-china  # 使用镜像
-./rubygems-cli -install                 # 自动安装 Ruby/RubyGems
-./rubygems-cli -help                    # 帮助
+```bash
+go build -o rubygems ./cmd/rubygems/
 ```
+
+### 读命令
+
+```bash
+./rubygems get rails                         # 包信息
+./rubygems search rails --limit 10           # 搜索
+./rubygems autocomplete rail                 # 自动补全建议
+./rubygems versions rails --limit 20         # 版本列表
+./rubygems latest-version rails              # 最新版本
+./rubygems version-detail rails 8.1.3        # v2 详细版本信息
+./rubygems version-contents rails 8.1.3      # v2 文件校验和
+./rubygems downloads                         # 仓库总下载量
+./rubygems version-downloads rails 8.1.3     # 版本下载量
+./rubygems top-downloads --limit 10          # 下载排行
+./rubygems deps rails rack                   # 依赖（API 已废弃）
+./rubygems rdeps rack --limit 50             # 反向依赖
+./rubygems version-rdeps rack-2.2.7          # 版本级反向依赖
+./rubygems latest-gems                       # 最近发布
+./rubygems just-updated                      # 最近更新
+./rubygems user-profile qrush                # 用户资料
+./rubygems owned-gems                        # 你的 Gem（--token）
+./rubygems gems-by-owner qrush               # 某用户的 Gem
+./rubygems gem-owners rails                  # Gem 所有者
+./rubygems attestations rails 8.1.3          # Sigstore 签名
+./rubygems mfa-status                        # MFA 状态（--token）
+```
+
+### 批量命令
+
+```bash
+./rubygems bulk-get rails rack bundler --concurrency 5
+./rubygems bulk-versions rails,rack --concurrency 3
+./rubygems bulk-deps rails,rack
+./rubygems bulk-rdeps rails,rack
+```
+
+### 写命令（需要 `--token` 或 HTTP Basic 认证）
+
+```bash
+./rubygems push ./my-gem-1.0.0.gem                              # 发布 Gem
+./rubygems yank my-gem 1.0.0                                     # 撤回版本
+./rubygems yank my-gem 1.0.0 --platform x86_64-linux            # 带平台撤回
+./rubygems add-owner my-gem user@example.com --role owner        # 添加所有者
+./rubygems remove-owner my-gem user@example.com                  # 移除所有者
+./rubygems update-owner my-gem user@example.com --role owner     # 更新所有者角色
+./rubygems list-webhooks                                         # 列出 Webhook
+./rubygems create-webhook my-gem https://example.com/hook        # 创建 Webhook
+./rubygems delete-webhook my-gem https://example.com/hook        # 删除 Webhook
+./rubygems fire-webhook my-gem https://example.com/hook          # 测试触发 Webhook
+./rubygems get-api-key --user name                               # 获取 API Key（Basic）
+./rubygems create-api-key --user name --name ci --scopes push_rubygem,yank_rubygem
+./rubygems update-api-key --user name --api-key KEY --scopes index_rubygems
+./rubygems my-profile --user name                                # 完整资料（Basic）
+```
+
+### 自动安装命令
+
+```bash
+./rubygems install                 # 自动安装 Ruby/RubyGems
+./rubygems install --force         # 强制重装
+./rubygems install --no-dev --no-bundler
+./rubygems platform                # 探测 OS/发行版/包管理器
+```
+
+### 全局选项
+
+```bash
+./rubygems get rails --json                  # JSON 输出
+./rubygems get rails --mirror ruby-china     # 使用镜像
+./rubygems get rails --cache                 # 开启内存缓存
+./rubygems get rails --token $RUBYGEMS_TOKEN # 认证
+./rubygems get rails --proxy http://127.0.0.1:7890   # HTTP 代理
+./rubygems get rails --retry --retry-attempts 5      # 重试与退避
+./rubygems get rails --timeout 60                    # 请求超时（秒）
+./rubygems get rails --server https://gems.example.com  # 自定义服务器
+```
+
+> **镜像说明：** 只有官方源和 `ruby-china` 提供 RubyGems.org API。`tsinghua` 和 `aliyun` 镜像只提供 gem 文件下载，API 调用会返回 404。
+
+执行 `./rubygems --help` 或 `./rubygems <命令> --help` 查看完整用法。
 
 ---
 

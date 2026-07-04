@@ -19,28 +19,35 @@ func NewRubyChinaRepository() Repository {
 
 // ------------------------------------------------- --------------------------------------------------------------------
 
-// Tsinghua University RubyGems mirror source
-// API base path: https://mirrors.tuna.tsinghua.edu.cn/rubygems/api
-const ServerURLTSingHua = "https://mirrors.tuna.tsinghua.edu.cn/rubygems/api"
-
-// NewTSingHuaRepository Use Tsinghua University mirror repository
+// Tsinghua University RubyGems mirror source.
 //
-// Note: Tsinghua source uses /api path prefix, different from official rubygems.org.
-// If mirror service is unavailable, try other mirror sources or use NewCustomRepository.
+// NOTE: The Tsinghua mirror only mirrors gem files, NOT the RubyGems.org API.
+// API calls (GetPackage, Search, etc.) will return 404. Use this mirror only
+// for gem download URLs; for API queries use the official source or Ruby China.
+const ServerURLTSingHua = "https://mirrors.tuna.tsinghua.edu.cn/rubygems"
+
+// NewTSingHuaRepository Use Tsinghua University mirror repository.
+//
+// Warning: Tsinghua mirror does NOT provide the API. API calls will fail with
+// 404. Prefer NewRubyChinaRepository for API access in China, or use the
+// official source.
 func NewTSingHuaRepository() Repository {
 	return NewRepository(NewOptions().SetServerURL(ServerURLTSingHua))
 }
 
 // ------------------------------------------------- --------------------------------------------------------------------
 
-// Alibaba Cloud RubyGems mirror source
-// Base path: https://mirrors.aliyun.com/rubygems
+// Alibaba Cloud RubyGems mirror source.
+//
+// NOTE: The Alibaba Cloud mirror only mirrors gem files, NOT the RubyGems.org
+// API. API calls will return 404. Use this mirror only for gem download URLs.
 const ServerURLAliYun = "https://mirrors.aliyun.com/rubygems"
 
-// NewAliYunRepository Use Alibaba Cloud mirror repository
+// NewAliYunRepository Use Alibaba Cloud mirror repository.
 //
-// Note: Alibaba Cloud RubyGems mirror may only provide gem downloads, not complete API service.
-// If 404 or API unavailable, use official source or configure other custom repository endpoint.
+// Warning: Alibaba Cloud mirror does NOT provide the API. API calls will fail
+// with 404. Prefer NewRubyChinaRepository for API access in China, or use the
+// official source.
 func NewAliYunRepository() Repository {
 	return NewRepository(NewOptions().SetServerURL(ServerURLAliYun))
 }

@@ -28,12 +28,13 @@ func TestAllMirrors(t *testing.T) {
 		"rake",
 	}
 
-	// Create repositories with different mirror sources
+	// Create repositories with different mirror sources.
+	// Only the official source and Ruby China provide the RubyGems.org API.
+	// Tsinghua and Alibaba Cloud mirrors only serve gem files — their API
+	// endpoints return 404, so they are excluded from API tests.
 	repos := map[string]repository.Repository{
 		"Official":  repository.NewRepository(),
 		"RubyChina": repository.NewRubyChinaRepository(),
-		"TsingHua":  repository.NewTSingHuaRepository(),
-		"AliYun":    repository.NewAliYunRepository(),
 	}
 
 	// Iterate over all mirror sources
