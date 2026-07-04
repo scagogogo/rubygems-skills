@@ -207,6 +207,79 @@ If you're building Go tooling that interacts with the Ruby gem ecosystem — dep
 
 ---
 
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph App["Your Go program / CLI / AI agent"]
+        Code["calls SDK APIs"]
+    end
+
+    subgraph SDK["rubygems-skills SDK"]
+        Repo["Repository (read)<br/>no auth needed"]
+        WriteRepo["WriteRepository (write)<br/>token / basic auth"]
+        Cached["CachedRepository<br/>decorator with TTL"]
+        Bulk["Bulk operations<br/>concurrent worker pool"]
+        Retry["Retry layer<br/>exponential backoff"]
+        Install["pkg/install<br/>Ruby/RubyGems auto-installer"]
+    end
+
+    subgraph Net["Network"]
+        Official["rubygems.org<br/>(official API)"]
+        China["gems.ruby-china.com<br/>(API mirror)"]
+        Mirrors["tsinghua / aliyun<br/>(gem files only)"]
+        Custom["custom gem server"]
+    end
+
+    Code --> Repo
+    Code --> WriteRepo
+    Code --> Bulk
+    Code --> Install
+    Cached --> Repo
+    Repo --> Retry
+    WriteRepo --> Retry
+    Bulk --> Repo
+    Retry --> Official
+    Retry --> China
+    Retry --> Mirrors
+    Retry --> Custom
+
+    classDef app fill:#7c3aed22,stroke:#7c3aed,color:#fff
+    classDef sdk fill:#0ea5e922,stroke:#0ea5e9,color:#fff
+    classDef net fill:#10b98122,stroke:#10b981,color:#fff
+    class Code app
+    class Repo,WriteRepo,Cached,Bulk,Retry,Install sdk
+    class Official,China,Mirrors,Custom net
+```
+
+**Layering:** callers hit `Repository` / `WriteRepository`; `CachedRepository` decorates `Repository`; bulk operations fan out over `Repository`; every HTTP call flows through the optional retry layer to a chosen server. The auto-installer is independent — it provisions Ruby on the host, no network to rubygems.org required.
+
+## Request flow
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Repository
+    participant Retry
+    participant HTTP
+    participant RubyGems as rubygems.org
+
+    Caller->>Repository: GetPackage(ctx, "rails")
+    Repository->>Repository: build URL + PathEscape(gem)
+    Repository->>Retry: send (if --retry)
+    Retry->>HTTP: GET /api/v1/gems/rails.json
+    HTTP->>RubyGems: HTTPS request
+    RubyGems-->>HTTP: 200 JSON
+    HTTP-->>Retry: body bytes
+    Retry-->>Repository: bytes (retried on 429/5xx)
+    Repository->>Repository: json.Unmarshal → *PackageInformation
+    Repository-->>Caller: *PackageInformation, nil
+```
+
+On a 404 the SDK returns an error satisfying `IsNotFound`; on 429, `IsRateLimited`; on 401/403, `IsUnauthorized`. With `--retry` enabled, transient failures (network errors, 429, 5xx) are retried with exponential backoff before surfacing.
+
+---
+
 ## Installation
 
 ```bash

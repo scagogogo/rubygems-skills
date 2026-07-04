@@ -35,6 +35,8 @@ export default withMermaid(
           { text: 'API', link: '/api/repository', activeMatch: '/api/' },
           { text: 'CLI', link: '/cli/install', activeMatch: '/cli/' },
           { text: 'Auto-Install', link: '/auto-install/overview', activeMatch: '/auto-install/' },
+          { text: 'Architecture', link: '/guide/architecture', activeMatch: '/guide/architecture' },
+          { text: 'Examples', link: '/cli/examples', activeMatch: '/cli/examples' },
           { text: 'GitHub', link: 'https://github.com/scagogogo/rubygems-skills' },
         ],
         sidebar: {
@@ -45,6 +47,7 @@ export default withMermaid(
                 { text: 'What is rubygems-skills?', link: '/guide/what-is-rubygems-skills' },
                 { text: 'Why use it?', link: '/guide/why' },
                 { text: 'How it works', link: '/guide/how-it-works' },
+                { text: 'Architecture', link: '/guide/architecture' },
               ],
             },
             {
@@ -146,6 +149,8 @@ export default withMermaid(
           { text: 'API', link: '/zh/api/repository', activeMatch: '/zh/api/' },
           { text: 'CLI', link: '/zh/cli/install', activeMatch: '/zh/cli/' },
           { text: '自动安装', link: '/zh/auto-install/overview', activeMatch: '/zh/auto-install/' },
+          { text: '架构', link: '/zh/guide/architecture', activeMatch: '/zh/guide/architecture' },
+          { text: '示例', link: '/zh/cli/examples', activeMatch: '/zh/cli/examples' },
           { text: 'GitHub', link: 'https://github.com/scagogogo/rubygems-skills' },
         ],
         sidebar: {
@@ -156,6 +161,7 @@ export default withMermaid(
                 { text: '什么是 rubygems-skills？', link: '/zh/guide/what-is-rubygems-skills' },
                 { text: '为什么选择它？', link: '/zh/guide/why' },
                 { text: '工作原理', link: '/zh/guide/how-it-works' },
+                { text: '架构', link: '/zh/guide/architecture' },
               ],
             },
             {

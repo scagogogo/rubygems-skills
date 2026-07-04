@@ -54,3 +54,36 @@
 .dark .mermaid svg polygon {
   stroke: rgba(235, 235, 245, 0.35) !important;
 }
+
+/*
+ * Top navigation: never clip or hide menu items. The default VitePress nav
+ * can crop on narrower viewports when there are many top-level items; we
+ * explicitly allow wrapping and forbid overflow:hidden so every menu label
+ * stays visible and clickable.
+ */
+.VPNavBar .VPNavBarMenu {
+  flex-wrap: wrap;
+  overflow: visible !important;
+  white-space: nowrap;
+}
+.VPNavBar .VPNavBarMenu .VPNavBarMenuLink,
+.VPNavBar .VPNavBarMenu .VPNavBarMenuItem {
+  white-space: nowrap;
+}
+/* let the nav content area grow instead of truncating */
+.VPNavBar .content {
+  overflow: visible !important;
+}
+.VPNavBar .divider-line {
+  display: none;
+}
+
+/*
+ * On narrower viewports (tablet), let the nav wrap to a second row rather
+ * than collapsing items into an overflow that the user can't reach.
+ */
+@media (max-width: 960px) {
+  .VPNavBar .VPNavBarMenu {
+    padding-bottom: 0.25rem;
+  }
+}

@@ -207,6 +207,79 @@ go build -o rubygems ./cmd/rubygems/
 
 ---
 
+## 架构
+
+```mermaid
+flowchart TB
+    subgraph App["你的 Go 程序 / CLI / AI Agent"]
+        Code["调用 SDK API"]
+    end
+
+    subgraph SDK["rubygems-skills SDK"]
+        Repo["Repository（读）<br/>无需认证"]
+        WriteRepo["WriteRepository（写）<br/>token / basic 认证"]
+        Cached["CachedRepository<br/>带 TTL 的装饰器"]
+        Bulk["批量操作<br/>并发 worker 池"]
+        Retry["重试层<br/>指数退避"]
+        Install["pkg/install<br/>Ruby/RubyGems 自动安装"]
+    end
+
+    subgraph Net["网络"]
+        Official["rubygems.org<br/>（官方 API）"]
+        China["gems.ruby-china.com<br/>（API 镜像）"]
+        Mirrors["清华 / 阿里云<br/>（仅 gem 文件）"]
+        Custom["自定义 gem 服务器"]
+    end
+
+    Code --> Repo
+    Code --> WriteRepo
+    Code --> Bulk
+    Code --> Install
+    Cached --> Repo
+    Repo --> Retry
+    WriteRepo --> Retry
+    Bulk --> Repo
+    Retry --> Official
+    Retry --> China
+    Retry --> Mirrors
+    Retry --> Custom
+
+    classDef app fill:#7c3aed22,stroke:#7c3aed,color:#fff
+    classDef sdk fill:#0ea5e922,stroke:#0ea5e9,color:#fff
+    classDef net fill:#10b98122,stroke:#10b981,color:#fff
+    class Code app
+    class Repo,WriteRepo,Cached,Bulk,Retry,Install sdk
+    class Official,China,Mirrors,Custom net
+```
+
+**分层：** 调用方使用 `Repository` / `WriteRepository`；`CachedRepository` 装饰 `Repository`；批量操作在 `Repository` 上扇出；每次 HTTP 调用经可选的重试层到达所选服务器。自动安装器独立工作——它在主机上安装 Ruby，不需要访问 rubygems.org。
+
+## 请求流程
+
+```mermaid
+sequenceDiagram
+    participant Caller as 调用方
+    participant Repository
+    participant Retry as 重试层
+    participant HTTP
+    participant RubyGems as rubygems.org
+
+    Caller->>Repository: GetPackage(ctx, "rails")
+    Repository->>Repository: 构造 URL + PathEscape(gem)
+    Repository->>Retry: 发送（若 --retry）
+    Retry->>HTTP: GET /api/v1/gems/rails.json
+    HTTP->>RubyGems: HTTPS 请求
+    RubyGems-->>HTTP: 200 JSON
+    HTTP-->>Retry: body 字节
+    Retry-->>Repository: bytes（429/5xx 时重试）
+    Repository->>Repository: json.Unmarshal → *PackageInformation
+    Repository-->>Caller: *PackageInformation, nil
+```
+
+404 时 SDK 返回满足 `IsNotFound` 的错误；429 时 `IsRateLimited`；401/403 时 `IsUnauthorized`。开启 `--retry` 时，瞬态故障（网络错误、429、5xx）会先以指数退避重试，再向上抛出。
+
+---
+
 ## 安装
 
 ```bash
