@@ -122,3 +122,15 @@ func printOutput(v interface{}) {
 // exitCode lets RunE handlers signal a non-zero exit without os.Exit (which would
 // skip cobra's deferred output flush). main() reads this after Execute.
 var exitCode int
+
+// markRequired flags the named flags as required on c. It panics if a flag is
+// missing — these are static, compile-time-known flag names, so a failure is a
+// programming error, not a runtime condition. Wrapping c.MarkFlagRequired this
+// way satisfies errcheck.
+func markRequired(c *cobra.Command, names ...string) {
+	for _, n := range names {
+		if err := c.MarkFlagRequired(n); err != nil {
+			panic(fmt.Errorf("mark flag %q required: %w", n, err))
+		}
+	}
+}

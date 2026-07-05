@@ -335,7 +335,7 @@ func (i *Installer) Install(ctx context.Context) (*InstallResult, error) {
 	}
 
 	// 3. Install via the appropriate package manager
-	commandsRun := []string{}
+	var commandsRun []string
 	var installErr error
 
 	switch platform.PackageMgr {

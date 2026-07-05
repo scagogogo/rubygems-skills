@@ -510,8 +510,7 @@ func timeframeCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&from, "from", "", "Start time (RFC3339)")
 	c.Flags().StringVar(&to, "to", "", "End time (RFC3339)")
-	c.MarkFlagRequired("from")
-	c.MarkFlagRequired("to")
+	markRequired(c, "from", "to")
 	return c
 }
 

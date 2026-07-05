@@ -115,7 +115,7 @@ func updateOwnerCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&role, "role", "", "New owner role")
-	c.MarkFlagRequired("role")
+	markRequired(c, "role")
 	return c
 }
 
@@ -207,7 +207,7 @@ func getAPIKeyCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&user, "user", "", "RubyGems.org username")
 	c.Flags().StringVar(&pass, "password", "", "RubyGems.org password (read from stdin if empty)")
-	c.MarkFlagRequired("user")
+	markRequired(c, "user")
 	return c
 }
 
@@ -239,8 +239,7 @@ func createAPIKeyCmd() *cobra.Command {
 	c.Flags().StringVar(&name, "name", "", "API key name")
 	c.Flags().StringSliceVar(&scopes, "scopes", nil, "Scopes (e.g. push_rubygem,yank_rubygem)")
 	c.Flags().StringVar(&mfa, "mfa", "", "MFA setting: enabled or disabled")
-	c.MarkFlagRequired("user")
-	c.MarkFlagRequired("name")
+	markRequired(c, "user", "name")
 	return c
 }
 
@@ -270,8 +269,7 @@ func updateAPIKeyCmd() *cobra.Command {
 	c.Flags().StringVar(&pass, "password", "", "RubyGems.org password")
 	c.Flags().StringVar(&apiKey, "api-key", "", "Existing API key value")
 	c.Flags().StringSliceVar(&scopes, "scopes", nil, "New scopes")
-	c.MarkFlagRequired("user")
-	c.MarkFlagRequired("api-key")
+	markRequired(c, "user", "api-key")
 	return c
 }
 
@@ -294,6 +292,6 @@ func myProfileCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&user, "user", "", "RubyGems.org username")
 	c.Flags().StringVar(&pass, "password", "", "RubyGems.org password")
-	c.MarkFlagRequired("user")
+	markRequired(c, "user")
 	return c
 }

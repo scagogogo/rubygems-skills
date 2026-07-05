@@ -396,7 +396,7 @@ func TestInstallOptionsChaining(t *testing.T) {
 func TestNewInstaller(t *testing.T) {
 	installer := NewInstaller()
 	if installer == nil {
-		t.Error("NewInstaller() should not return nil")
+		t.Fatal("NewInstaller() should not return nil")
 	}
 	if installer.options == nil {
 		t.Error("Installer.options should not be nil")
