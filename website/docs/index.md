@@ -152,6 +152,6 @@ For write operations (publish, yank, owners, webhooks), the `WriteRepository` in
     Every method, every signature, every endpoint — the machine-readable map.
   </Card>
   <Card title="🛠️ CLI Tool" icon="terminal" link="./cli/install">
-    Query RubyGems from the command line. Auto-install Ruby with one flag.
+    Query, search, publish, and auto-install Ruby from the command line — cobra subcommands exposing the full SDK.
   </Card>
 </CardGrid>
