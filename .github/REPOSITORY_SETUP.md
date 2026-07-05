@@ -1,57 +1,65 @@
 # GitHub Repository Metadata
 
-This file documents the recommended GitHub repository settings.
+This file documents the GitHub repository settings currently applied to [scagogogo/rubygems-skills](https://github.com/scagogogo/rubygems-skills).
 
-## Description (short, one-line)
+## Description (one-line)
 
 ```
-Production-ready Go SDK for the RubyGems.org API with caching, retry, bulk operations, multi-mirror support, and CLI tool.
+A production-ready Go SDK for the RubyGems.org API — built for AI agents. Docs: https://scagogogo.github.io/rubygems-skills/
 ```
 
-## Topics (tags)
+## Homepage (website)
+
+```
+https://scagogogo.github.io/rubygems-skills/
+```
+
+The homepage points to the VitePress documentation site deployed via GitHub Pages from the `website/` directory (workflow: `.github/workflows/website.yml`).
+
+## Topics (19 tags)
 
 ```
 rubygems
 rubygems-api
+rubygems-client
 golang
 go-sdk
 ruby-gems
-api-client
 gem
-rubygems-client
-crawler
-mirror
-cache
+api-client
 cli
-concurrent
+cache
+retry
+backoff
 batch-operations
+mirror
 ruby-china
 private-gem-server
+cobra
+ai-agent
+claude-code
 ```
-
-## Social Preview Image
-
-Consider adding a social preview image at `docs/social-preview.png` (1280×640 recommended).
 
 ## How to Apply
 
-Run the following commands (requires `gh` CLI and admin permissions):
+These settings are already applied. To re-apply (requires `gh` CLI and admin permissions):
 
 ```bash
-# Set repository description
-gh repo edit --description "Production-ready Go SDK for the RubyGems.org API with caching, retry, bulk operations, multi-mirror support, and CLI tool."
+# Description
+gh repo edit scagogogo/rubygems-skills \
+  --description "A production-ready Go SDK for the RubyGems.org API — built for AI agents. Docs: https://scagogogo.github.io/rubygems-skills/"
 
-# Set repository topics
-gh repo edit --add-topic rubygems,rubygems-api,golang,go-sdk,ruby-gems,api-client,gem,rubygems-client,crawler,mirror,cache,cli,concurrent,batch-operations,ruby-china,private-gem-server
+# Homepage (GitHub Pages)
+gh repo edit scagogogo/rubygems-skills \
+  --homepage "https://scagogogo.github.io/rubygems-skills/"
 
-# Set website URL (optional)
-gh repo edit --homepage "https://pkg.go.dev/github.com/scagogogo/rubygems-skills"
+# Topics
+gh repo edit scagogogo/rubygems-skills \
+  --add-topic rubygems,rubygems-api,rubygems-client,golang,go-sdk,ruby-gems,gem,api-client,cli,cache,retry,backoff,batch-operations,mirror,ruby-china,private-gem-server,cobra,ai-agent,claude-code
 ```
 
-Or configure via GitHub UI:
-1. Go to `https://github.com/scagogogo/rubygems-skills`
-2. Click ⚙️ **Settings** (top bar)
-3. **General** tab:
-   - **Description**: Paste the description above
-   - **Website**: `https://pkg.go.dev/github.com/scagogogo/rubygems-skills`
-   - **Topics**: Add all topics listed above
+Or via GitHub UI: ⚙️ **Settings → General** on the repository page.
+
+## Social Preview Image
+
+Consider adding a social preview image at `website/public/social-preview.png` (1280×640 recommended).
