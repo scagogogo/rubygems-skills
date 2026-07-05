@@ -280,13 +280,13 @@ sequenceDiagram
 
 ---
 
-## 安装
+## 快速安装
 
 ```bash
 go get github.com/scagogogo/rubygems-skills
 ```
 
-**环境要求：** Go 1.21+
+**环境要求：** Go 1.21+。如需分步骤的 Agent 安装指引（含 `go mod tidy` 与编译验证），见上方的[安装](#安装)章节。
 
 ---
 

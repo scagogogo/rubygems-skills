@@ -280,13 +280,13 @@ On a 404 the SDK returns an error satisfying `IsNotFound`; on 429, `IsRateLimite
 
 ---
 
-## Installation
+## Quick Install
 
 ```bash
 go get github.com/scagogogo/rubygems-skills
 ```
 
-**Requirements:** Go 1.21+
+**Requirements:** Go 1.21+. For the step-by-step agent install (with `go mod tidy` and verification), see [Installation](#installation) above.
 
 ---
 

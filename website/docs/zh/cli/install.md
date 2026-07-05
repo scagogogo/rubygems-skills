@@ -1,6 +1,6 @@
 # CLI 安装
 
-仓库在 `cmd/rubygems` 下附带了一个命令行工具 —— 从终端查询 gem、列出版本、搜索，以及自动安装 Ruby，全部搞定。适合快速查询、shell 脚本和 CI 场景。
+仓库在 `cmd/rubygems` 下附带了一个命令行工具 —— 基于 [cobra](https://github.com/spf13/cobra) 构建，暴露了完整的 SDK：读查询、批量操作、写操作，以及 Ruby/RubyGems 自动安装器。
 
 ```mermaid
 flowchart TD
@@ -11,7 +11,7 @@ flowchart TD
     GoInstall --> Path["确保 $GOPATH/bin\n在 $PATH 中"]
     GoRun --> NoPath["无需配置 PATH"]
     Build --> Local["本地运行 ./rubygems"]
-    Path & NoPath & Local --> Verify["rubygems -get -gem rails\n→ 验证是否可用"]
+    Path & NoPath & Local --> Verify["rubygems get rails\n→ 验证是否可用"]
 
     classDef method fill:#7c3aed22,stroke:#7c3aed,color:#fff
     classDef ok fill:#16a34a22,stroke:#16a34a,color:#fff
@@ -29,7 +29,7 @@ go install github.com/scagogogo/rubygems-skills/cmd/rubygems@latest
 
 ```bash
 export PATH="$PATH:$(go env GOPATH)/bin"
-rubygems -help
+rubygems --help
 ```
 
 ## 从源码构建
@@ -38,36 +38,36 @@ rubygems -help
 git clone https://github.com/scagogogo/rubygems-skills.git
 cd rubygems-skills
 go build -o rubygems ./cmd/rubygems
-./rubygems -help
+./rubygems --help
 ```
 
 ## 验证
 
 ```bash
-rubygems -get -gem rails
+rubygems get rails
 ```
 
 你应该会看到 rails gem 的名称、版本和下载次数。
 
-## 功能一览
+## 命令分组
 
-| 子命令（flag） | 作用 |
-|---|---|
-| `-get -gem NAME` | 获取包信息 |
-| `-search -query QUERY` | 搜索包 |
-| `-versions -gem NAME` | 列出版本 |
-| `-deps -gem NAME` | 显示依赖 |
-| `-rdeps -gem NAME` | 显示反向依赖 |
-| `-install` | 在本机自动安装 Ruby/RubyGems |
+CLI 分为四组子命令：
 
-另外还有输出/格式/镜像相关的 flag（`-json`、`-cache`、`-mirror`、`-limit`）。详见 [命令](./commands)。
+| 分组 | 命令 | 认证 |
+|---|---|---|
+| **读** | `get`、`search`、`autocomplete`、`versions`、`latest-version`、`version-detail`、`version-contents`、`downloads`、`version-downloads`、`top-downloads`、`deps`、`rdeps`、`version-rdeps`、`latest-gems`、`just-updated`、`user-profile`、`owned-gems`、`gems-by-owner`、`gem-owners`、`attestations`、`mfa-status`、`timeframe` | 可选 `--token` |
+| **批量** | `bulk-get`、`bulk-versions`、`bulk-deps`、`bulk-rdeps` | 可选 `--token` |
+| **写** | `push`、`yank`、`add-owner`、`remove-owner`、`update-owner`、`list-webhooks`、`create-webhook`、`delete-webhook`、`fire-webhook`、`get-api-key`、`create-api-key`、`update-api-key`、`my-profile` | `--token` 或 HTTP Basic |
+| **安装** | `install`、`platform` | 无 |
+
+全局 flag（`--mirror`、`--server`、`--token`、`--proxy`、`--timeout`、`--json`、`--cache`、`--retry`）适用于绝大多数命令。详见 [命令](./commands)。
 
 ## 不想安装？用 `go run`
 
 你也可以完全跳过二进制，直接即时运行：
 
 ```bash
-go run github.com/scagogogo/rubygems-skills/cmd/rubygems@latest -get -gem rails
+go run github.com/scagogogo/rubygems-skills/cmd/rubygems@latest get rails
 ```
 
 ---
