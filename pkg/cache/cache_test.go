@@ -215,6 +215,24 @@ func TestClose(t *testing.T) {
 	cache.Close()
 }
 
+// TestSetWithExpirationZeroDurationUsesDefault covers the d == 0 branch in
+// SetWithExpiration, which falls back to the cache's default expiration.
+func TestSetWithExpirationZeroDurationUsesDefault(t *testing.T) {
+	cache := NewMemoryCache(50*time.Millisecond, 0)
+	defer cache.Close()
+
+	cache.SetWithExpiration("k", "v", 0)
+	if val, found := cache.Get("k"); !found || val.(string) != "v" {
+		t.Errorf("expected k=v with default expiration, got %v found=%v", val, found)
+	}
+
+	// Wait beyond the default expiration; the item should expire.
+	time.Sleep(100 * time.Millisecond)
+	if _, found := cache.Get("k"); found {
+		t.Error("expected k to expire after default TTL")
+	}
+}
+
 // Test cache expiration
 func TestExpiredItemRemoval(t *testing.T) {
 	cache := NewMemoryCache(50*time.Millisecond, 0)
