@@ -1,10 +1,13 @@
 package repository
 
 import (
+	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/crawler-go-go-go/go-requests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -95,4 +98,98 @@ func TestRetryOptions_WithShouldRetry(t *testing.T) {
 	assert.True(t, options.ShouldRetry(assert.AnError))
 	assert.False(t, options.ShouldRetry(nil))
 	assert.False(t, options.ShouldRetry(ErrNotFound))
+}
+
+// ----- SendRequestWithRetry boundary coverage (calls the real function) ------
+
+// newRetryOptions builds an Options[any, []byte] wired to a stub transport that
+// returns the given sequence of responses for "/x".
+func newRetryOptions(t *testing.T, tr *fakeRoundTripper) *requests.Options[any, []byte] {
+	t.Helper()
+	rh := func(resp *http.Response) ([]byte, error) {
+		return requests.BytesResponseHandler()(resp)
+	}
+	opts := requests.NewOptions[any, []byte]("https://example.com/x", rh)
+	opts.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+		client.Transport = tr
+		return nil
+	})
+	return opts
+}
+
+// TestSendRequestWithRetry_NilRetryOptions covers the retryOptions==nil branch
+// (defaults are applied) and a successful first attempt.
+func TestSendRequestWithRetry_NilRetryOptions(t *testing.T) {
+	tr := newFakeTransport()
+	tr.stub("/x", 200, "ok")
+	opts := newRetryOptions(t, tr)
+	out, err := SendRequestWithRetry[any, []byte](context.Background(), opts, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("ok"), out)
+}
+
+// TestSendRequestWithRetry_ShouldRetryNilSuccess covers the err==nil branch
+// that is only reachable when ShouldRetry is nil (otherwise the ShouldRetry
+// check returns first).
+func TestSendRequestWithRetry_ShouldRetryNilSuccess(t *testing.T) {
+	tr := newFakeTransport()
+	tr.stub("/x", 200, "ok")
+	opts := newRetryOptions(t, tr)
+	ro := NewDefaultRetryOptions().WithMaxAttempts(3)
+	ro.WithShouldRetry(nil) // nil ShouldRetry
+	ro.WaitTime = time.Millisecond
+	ro.MaxWaitTime = time.Millisecond
+	out, err := SendRequestWithRetry[any, []byte](context.Background(), opts, ro)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("ok"), out)
+}
+
+// TestSendRequestWithRetry_ZeroMaxAttempts covers the loop-skipped path that
+// returns (lastResp, nil) when MaxAttempts == 0.
+func TestSendRequestWithRetry_ZeroMaxAttempts(t *testing.T) {
+	tr := newFakeTransport()
+	tr.stub("/x", 200, "ok")
+	opts := newRetryOptions(t, tr)
+	ro := &RetryOptions{MaxAttempts: 0, ShouldRetry: func(error) bool { return true }}
+	out, err := SendRequestWithRetry[any, []byte](context.Background(), opts, ro)
+	assert.NoError(t, err)
+	assert.Nil(t, out)
+}
+
+// TestSendRequestWithRetry_ContextCancelledDuringWait covers the
+// case <-ctx.Done() branch inside the retry wait.
+func TestSendRequestWithRetry_ContextCancelledDuringWait(t *testing.T) {
+	tr := newFakeTransport()
+	tr.stubErr("/x", errors.New("transient"))
+	opts := newRetryOptions(t, tr)
+	ctx, cancel := context.WithCancel(context.Background())
+	ro := NewDefaultRetryOptions().WithMaxAttempts(5)
+	ro.WaitTime = 200 * time.Millisecond
+	ro.WithExponentialBackoff(false)
+	// Cancel while the first retry wait is in flight.
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+	_, err := SendRequestWithRetry[any, []byte](ctx, opts, ro)
+	assert.Error(t, err)
+	assert.Equal(t, context.Canceled, err)
+}
+
+// TestSendRequestWithRetry_BackoffCappedToMaxWait covers the
+// waitTime > MaxWaitTime branch of exponential backoff.
+func TestSendRequestWithRetry_BackoffCappedToMaxWait(t *testing.T) {
+	tr := newFakeTransport()
+	tr.stubErr("/x", errors.New("transient"))
+	opts := newRetryOptions(t, tr)
+	ro := NewDefaultRetryOptions().WithMaxAttempts(3)
+	ro.WaitTime = 1 * time.Second        // large base
+	ro.MaxWaitTime = 5 * time.Millisecond // capped tiny
+	ro.WithExponentialBackoff(true)
+	start := time.Now()
+	_, err := SendRequestWithRetry[any, []byte](context.Background(), opts, ro)
+	elapsed := time.Since(start)
+	assert.Error(t, err)
+	// Two waits (attempt 1->2 and 2->3) each capped at ~5ms; total well under 1s.
+	assert.Less(t, elapsed, 500*time.Millisecond, "backoff should be capped to MaxWaitTime")
 }

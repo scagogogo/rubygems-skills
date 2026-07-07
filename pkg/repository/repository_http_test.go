@@ -153,7 +153,7 @@ func TestReadMethods_TableDriven(t *testing.T) {
 		{"versions", "/api/v1/versions/rails.json", `[{"number":"7.0.0"}]`, func(r *RepositoryImpl) (interface{}, error) {
 			return r.GetGemVersions(context.Background(), "rails")
 		}},
-		{"latest-version", "/api/v1/versions/rails/latest.json", `{"number":"7.0.0"}`, func(r *RepositoryImpl) (interface{}, error) {
+		{"latest-version", "/api/v1/versions/rails/latest.json", `{"version":"7.0.0"}`, func(r *RepositoryImpl) (interface{}, error) {
 			return r.GetGemLatestVersion(context.Background(), "rails")
 		}},
 		{"version-detail", "/api/v2/rubygems/rails/versions/7.0.0.json", `{"number":"7.0.0","yanked":false}`, func(r *RepositoryImpl) (interface{}, error) {
