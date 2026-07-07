@@ -14,6 +14,8 @@ type fakeRoundTripper struct {
 	mu        sync.Mutex
 	requests  []recordedRequest
 	responses map[string]cannedResponse // keyed by URL path
+	sequences map[string][]cannedResponse
+	seqIdx    map[string]int
 	callCount int
 }
 
@@ -33,7 +35,11 @@ type cannedResponse struct {
 }
 
 func newFakeTransport() *fakeRoundTripper {
-	return &fakeRoundTripper{responses: map[string]cannedResponse{}}
+	return &fakeRoundTripper{
+		responses: map[string]cannedResponse{},
+		sequences: map[string][]cannedResponse{},
+		seqIdx:    map[string]int{},
+	}
 }
 
 // stub registers a canned response for a given URL path.
@@ -45,6 +51,14 @@ func (t *fakeRoundTripper) stub(path string, status int, body string) *fakeRound
 // stubErr registers a transport-level error for a given URL path.
 func (t *fakeRoundTripper) stubErr(path string, err error) *fakeRoundTripper {
 	t.responses[path] = cannedResponse{err: err}
+	return t
+}
+
+// stubSequence registers an ordered sequence of responses for a given URL path.
+// Each request consumes the next response; when the sequence is exhausted the
+// last response repeats.
+func (t *fakeRoundTripper) stubSequence(path string, resps ...cannedResponse) *fakeRoundTripper {
+	t.sequences[path] = resps
 	return t
 }
 
@@ -63,6 +77,15 @@ func (t *fakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		Body:   body,
 	})
 	canned, ok := t.responses[req.URL.Path]
+	if seq, hasSeq := t.sequences[req.URL.Path]; hasSeq {
+		idx := t.seqIdx[req.URL.Path]
+		if idx >= len(seq) {
+			idx = len(seq) - 1
+		}
+		canned = seq[idx]
+		ok = true
+		t.seqIdx[req.URL.Path] = idx + 1
+	}
 	t.mu.Unlock()
 
 	if !ok {
