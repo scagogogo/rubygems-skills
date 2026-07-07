@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"sync"
@@ -28,10 +29,11 @@ type recordedRequest struct {
 }
 
 type cannedResponse struct {
-	statusCode int
-	body       []byte
-	header     http.Header
-	err        error
+	statusCode  int
+	body        []byte
+	header      http.Header
+	err         error
+	bodyOverride io.ReadCloser // when set, replaces nopBody in the response
 }
 
 func newFakeTransport() *fakeRoundTripper {
@@ -61,6 +63,24 @@ func (t *fakeRoundTripper) stubSequence(path string, resps ...cannedResponse) *f
 	t.sequences[path] = resps
 	return t
 }
+
+// overrideBody replaces the response body for a path with a custom ReadCloser.
+// Used to inject bodies that fail on read, exercising error paths.
+func (t *fakeRoundTripper) overrideBody(path string, body io.ReadCloser) *fakeRoundTripper {
+	if c, ok := t.responses[path]; ok {
+		c.bodyOverride = body
+		t.responses[path] = c
+	} else {
+		t.responses[path] = cannedResponse{statusCode: 200, bodyOverride: body}
+	}
+	return t
+}
+
+// brokenBody is a ReadCloser whose Read always returns an error.
+type brokenBody struct{}
+
+func (brokenBody) Read(p []byte) (int, error) { return 0, errors.New("read failed") }
+func (brokenBody) Close() error               { return nil }
 
 func (t *fakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.mu.Lock()
@@ -98,9 +118,15 @@ func (t *fakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	if hdr == nil {
 		hdr = http.Header{}
 	}
+	var respBody io.ReadCloser
+	if canned.bodyOverride != nil {
+		respBody = canned.bodyOverride
+	} else {
+		respBody = nopBody(canned.body)
+	}
 	return &http.Response{
 		StatusCode: canned.statusCode,
-		Body:       nopBody(canned.body),
+		Body:       respBody,
 		Header:     hdr,
 		Request:    req,
 	}, nil
