@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -84,3 +85,35 @@ func TestOptions_DisableRetry(t *testing.T) {
 	// Verify retry was disabled
 	assert.Nil(t, options.RetryOptions)
 }
+
+func TestNewOptions_HTTPClientNilByDefault(t *testing.T) {
+	options := NewOptions()
+	assert.Nil(t, options.HTTPClient)
+}
+
+func TestOptions_SetHTTPClient(t *testing.T) {
+	options := NewOptions()
+	c := &http.Client{}
+	result := options.SetHTTPClient(c)
+	assert.Same(t, options, result)
+	assert.Same(t, c, options.HTTPClient)
+}
+
+func TestOptions_DisableRetryAfterSet(t *testing.T) {
+	options := NewOptions().SetRetryOptions(&RetryOptions{MaxAttempts: 5})
+	assert.NotNil(t, options.RetryOptions)
+	options.DisableRetry()
+	assert.Nil(t, options.RetryOptions)
+}
+
+func TestNewOptions_DefaultRetryValues(t *testing.T) {
+	options := NewOptions()
+	assert.Equal(t, DefaultRetryAttempts, options.RetryOptions.MaxAttempts)
+	assert.Equal(t, DefaultRetryWaitTime, options.RetryOptions.WaitTime)
+	assert.Equal(t, DefaultRetryMaxWaitTime, options.RetryOptions.MaxWaitTime)
+	assert.True(t, options.RetryOptions.UseExponentialBackoff)
+	assert.NotNil(t, options.RetryOptions.ShouldRetry)
+}
+
+// keep time referenced (avoids unused import if other assertions drop it)
+var _ = time.Second
