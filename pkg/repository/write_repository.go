@@ -159,6 +159,15 @@ func (w *WriteRepositoryImpl) PushGem(ctx context.Context, gemFile []byte) (stri
 
 	options := requests.NewOptions[any, string](targetUrl, responseHandler)
 
+	// Inject custom HTTP client transport for test stubbing
+	if w.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = w.options.HTTPClient.Transport
+			client.Timeout = w.options.HTTPClient.Timeout
+			return nil
+		})
+	}
+
 	// Set multipart body
 	options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
 		request.Method = http.MethodPost
@@ -387,6 +396,15 @@ func (w *WriteRepositoryImpl) sendFormRequest(ctx context.Context, method, targe
 
 	options := requests.NewOptions[any, string](targetUrl, responseHandler)
 
+	// Inject custom HTTP client transport for test stubbing
+	if w.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = w.options.HTTPClient.Transport
+			client.Timeout = w.options.HTTPClient.Timeout
+			return nil
+		})
+	}
+
 	// Set request body and Content-Type
 	options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
 		request.Method = method
@@ -438,6 +456,15 @@ func (w *WriteRepositoryImpl) sendFormRequestWithBasicAuth(ctx context.Context, 
 	}
 
 	options := requests.NewOptions[any, string](targetUrl, responseHandler)
+
+	// Inject custom HTTP client transport for test stubbing
+	if w.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = w.options.HTTPClient.Transport
+			client.Timeout = w.options.HTTPClient.Timeout
+			return nil
+		})
+	}
 
 	// Set request body and Content-Type
 	options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
