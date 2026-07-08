@@ -678,6 +678,45 @@ go test -v ./...
 
 # Run with race detector
 go test -short -race -v ./...
+
+# Coverage report
+go test -short -coverprofile=cover.out ./... && go tool cover -func=cover.out | tail -1
+```
+
+**Coverage target.** `pkg/` packages aim for 100% statement coverage; `cmd/`
+(the CLI thin layer) is covered to ~89% — `main()` is an entry point and
+`installCmd` drives real OS package managers, both intentionally excluded
+from isolated unit tests. Run `go tool cover -func=cover.out` to see
+per-function numbers.
+
+### Testability design
+
+All I/O (HTTP, filesystem, `os/exec`, runtime detection) is hidden behind
+package-level injectable seams so unit tests run hermetically — no network,
+no real subprocess, no host mutation:
+
+- **HTTP**: `Options.SetHTTPClient(http.Client)` lets tests inject a
+  `httptest.Server`-backed transport; mirror/custom constructors accept a
+  custom server URL.
+- **CLI factories**: `cmd/rubygems` exposes `newRepoFunc` / `newWriteRepoFunc`
+  package vars and a `buildRootCmd()` helper, so tests swap in a stubbed
+  repository pointing at an `httptest.Server` and drive cobra via `SetArgs`
+  with stdout captured through an `os.Pipe`.
+- **Installer**: `pkg/install` routes every `os.ReadFile` / `os.Stat` /
+  `exec.LookPath` / `exec.Command` / `runtime.GOOS` call through injectable
+  vars (`osReadFile`, `osStat`, `detectOSFunc`, `detectArchFunc`, `runner`)
+  plus a `commandRunner` interface with a programmable `fakeRunner`, reaching
+  100% coverage across every platform / package-manager / distro branch.
+
+### Error decision tree
+
+```
+err != nil
+ │
+ ├─ repository.IsNotFound(err)      → 404: gem/version/user does not exist
+ ├─ repository.IsRateLimited(err)   → 429: back off, retry, or add --token
+ ├─ repository.IsUnauthorized(err)  → 401/403: missing/invalid token or Basic auth
+ └─ else → errors.As(err, &apiErr)  → apiErr.StatusCode / .URL / .Response
 ```
 
 ---
