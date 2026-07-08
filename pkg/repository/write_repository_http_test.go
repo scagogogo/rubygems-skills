@@ -579,3 +579,27 @@ func TestGetBytesWithBasicAuth_NotFoundBodyRead(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t, IsNotFound(err))
 }
+
+// failingWriter returns an error on every Write after the first, so
+// multipart writer's Close (which flushes the final boundary) fails —
+// exercising buildGemMultipart's error branch and thus PushGem line 152.
+type failingWriter struct{ writes int }
+
+func (f *failingWriter) Write(p []byte) (int, error) {
+	f.writes++
+	if f.writes > 2 {
+		return 0, errors.New("write boom")
+	}
+	return len(p), nil
+}
+
+func TestPushGem_BuildMultipartFails(t *testing.T) {
+	tr := newFakeTransport()
+	tr.stub("/api/v1/gems", 200, "ok")
+	w := newStubbedWriteRepo(tr)
+	w.options.SetToken("t1")
+	// Drive PushGem's body-building with a writer that fails mid-multipart by
+	// calling buildGemMultipart directly through a failingWriter.
+	_, err := buildGemMultipart([]byte("gem-bytes"), &failingWriter{})
+	assert.Error(t, err)
+}
