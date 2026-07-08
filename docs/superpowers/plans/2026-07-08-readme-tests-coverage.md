@@ -1,7 +1,7 @@
 # README + Full Test Coverage Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `superpowers:subagent-driven-development`
-> Steps use checkbox (`- [ ]`) syntax.
+> Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** 校正 GitHub 仓库描述、强化面向 AI Agent 的 README、为全部 SDK 功能补齐分支级单元测试并跑通至覆盖率 100%，修复过程中发现的问题。
 
@@ -24,7 +24,7 @@
 - Modify: `pkg/repository/repository.go:361-445`
 - Create: `pkg/repository/testutil_test.go`
 
-- [ ] **Step 1: 扩展 Options 加 HTTPClient 字段 — 支持注入自定义 http.Client 用于测试打桩**
+- [x] **Step 1: 扩展 Options 加 HTTPClient 字段 — 支持注入自定义 http.Client 用于测试打桩**
 文件: `pkg/repository/options.go:6-29`（在 Options 结构体末尾、NewOptions 中加字段）
 
 ```go
@@ -99,7 +99,7 @@ func (x *Options) DisableRetry() *Options {
 
 注意：options.go 顶部需补 `"net/http"` import。
 
-- [ ] **Step 2: 在 getBytes 注入 HTTPClient Transport — 让读请求支持测试打桩**
+- [x] **Step 2: 在 getBytes 注入 HTTPClient Transport — 让读请求支持测试打桩**
 文件: `pkg/repository/repository.go:361-400`（替换整个 getBytes 方法）
 
 ```go
@@ -155,7 +155,7 @@ func (x *RepositoryImpl) getBytes(ctx context.Context, targetUrl string) ([]byte
 }
 ```
 
-- [ ] **Step 3: 在 getBytesWithBasicAuth 注入 HTTPClient Transport — 让 Basic Auth 读请求支持打桩**
+- [x] **Step 3: 在 getBytesWithBasicAuth 注入 HTTPClient Transport — 让 Basic Auth 读请求支持打桩**
 文件: `pkg/repository/repository.go:413-445`（替换整个 getBytesWithBasicAuth 方法）
 
 ```go
@@ -204,7 +204,7 @@ func (x *RepositoryImpl) getBytesWithBasicAuth(ctx context.Context, targetUrl, u
 }
 ```
 
-- [ ] **Step 4: 在 write_repository 的 sendFormRequest / sendFormRequestWithBasicAuth / PushGem 注入 HTTPClient**
+- [x] **Step 4: 在 write_repository 的 sendFormRequest / sendFormRequestWithBasicAuth / PushGem 注入 HTTPClient**
 
 文件: `pkg/repository/write_repository.go:147-192`（PushGem，在 `options := requests.NewOptions...` 之后、proxy 之前插入注入块），`372-421`（sendFormRequest，同样位置），`424-471`（sendFormRequestWithBasicAuth，同样位置）。三处统一加：
 
@@ -219,7 +219,7 @@ func (x *RepositoryImpl) getBytesWithBasicAuth(ctx context.Context, targetUrl, u
 	}
 ```
 
-- [ ] **Step 5: 创建测试打桩工具 — fakeRoundTripper 记录请求并返回预设响应**
+- [x] **Step 5: 创建测试打桩工具 — fakeRoundTripper 记录请求并返回预设响应**
 
 ```go
 package repository
@@ -349,14 +349,14 @@ func ioReadAll(r io.Reader) ([]byte, error) { return io.ReadAll(r) }
 
 并在 import 块补 `"bytes"`、`"io"`。
 
-- [ ] **Step 6: 验证编译与现有测试仍全绿**
+- [x] **Step 6: 验证编译与现有测试仍全绿**
 Run: `go build ./... && go test -short ./...`
 Expected:
   - Exit code: 0
   - Output contains: "ok" for each package
   - Output does NOT contain: "FAIL"
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 Run: `git add pkg/repository/options.go pkg/repository/repository.go pkg/repository/write_repository.go pkg/repository/testutil_test.go && git commit -m "refactor(repository): inject optional HTTPClient for testable HTTP stubbing"`
 
 ---
@@ -369,7 +369,7 @@ Run: `git add pkg/repository/options.go pkg/repository/repository.go pkg/reposit
 - Modify: `pkg/repository/mirrors_test.go`
 - Test: `pkg/repository/errors_test.go`（已存在 7 个，核查覆盖率补漏）
 
-- [ ] **Step 1: 补全 Options 测试 — 覆盖所有 Set* 链式方法、NewOptions 默认值、SetHTTPClient、DisableRetry**
+- [x] **Step 1: 补全 Options 测试 — 覆盖所有 Set* 链式方法、NewOptions 默认值、SetHTTPClient、DisableRetry**
 
 ```go
 package repository
@@ -426,7 +426,7 @@ func TestOptionsDisableRetryAfterSet(t *testing.T) {
 var _ = time.Second
 ```
 
-- [ ] **Step 2: 补全 mirrors 测试 — 覆盖所有 4 个构造函数返回正确的 ServerURL**
+- [x] **Step 2: 补全 mirrors 测试 — 覆盖所有 4 个构造函数返回正确的 ServerURL**
 
 ```go
 package repository
@@ -473,13 +473,13 @@ func TestMirrorConstantsDistinct(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: 验证 errors/options/mirrors 覆盖率**
+- [x] **Step 3: 验证 errors/options/mirrors 覆盖率**
 Run: `go test -short -cover ./pkg/repository/ 2>&1 | grep -E "coverage|FAIL"`
 Expected:
   - Exit code: 0
   - errors.go / options.go / mirrors.go 行达 100%（用 `-coverprofile` + `go tool cover -func` 核对，仅这三个文件）
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 Run: `git add pkg/repository/options_test.go pkg/repository/mirrors_test.go && git commit -m "test(repository): full coverage for errors, options, mirrors"`
 
 ---
@@ -490,7 +490,7 @@ Run: `git add pkg/repository/options_test.go pkg/repository/mirrors_test.go && g
 **Files:**
 - Modify: `pkg/cache/cache_test.go`（补：负 expiration 永不过期、cleanup 实际删除、Close 后 Get/Set 行为、Count 边界）
 
-- [ ] **Step 1: 补全 MemoryCache 测试 — 覆盖负 TTL 永不过期、cleanup goroutine 删除过期项、重复 Set 覆盖、Delete 不存在 key、Close 幂等**
+- [x] **Step 1: 补全 MemoryCache 测试 — 覆盖负 TTL 永不过期、cleanup goroutine 删除过期项、重复 Set 覆盖、Delete 不存在 key、Close 幂等**
 
 ```go
 package cache
@@ -573,13 +573,13 @@ func TestCountAfterClear(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 验证 cache 覆盖率 100%**
+- [x] **Step 2: 验证 cache 覆盖率 100%**
 Run: `go test -short -cover ./pkg/cache/ 2>&1 | tail -3`
 Expected:
   - Exit code: 0
   - Output contains: "coverage: 100.0%"
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 Run: `git add pkg/cache/cache_test.go && git commit -m "test(cache): 100% coverage incl negative TTL, cleanup, close idempotency"`
 
 ---
@@ -590,7 +590,7 @@ Run: `git add pkg/cache/cache_test.go && git commit -m "test(cache): 100% covera
 **Files:**
 - Create: `pkg/repository/repository_http_test.go`
 
-- [ ] **Step 1: 测试 GetPackage 全分支 — 成功、404、500、JSON 解析错误、proxy 注入、token 注入、URL 转义**
+- [x] **Step 1: 测试 GetPackage 全分支 — 成功、404、500、JSON 解析错误、proxy 注入、token 注入、URL 转义**
 
 ```go
 package repository
@@ -676,7 +676,7 @@ func TestGetPackage_WithProxy(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 测试 Search 的 page<=0 归一化分支 + 成功/错误**
+- [x] **Step 2: 测试 Search 的 page<=0 归一化分支 + 成功/错误**
 
 ```go
 func TestSearch_PageZeroNormalizedToOne(t *testing.T) {
@@ -717,7 +717,7 @@ func TestSearch_QueryEscaped(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: 测试其余读方法 — 每个至少 1 成功 + 1 错误，覆盖 URL 构造与 time 格式化**
+- [x] **Step 3: 测试其余读方法 — 每个至少 1 成功 + 1 错误，覆盖 URL 构造与 time 格式化**
 
 为以下方法各加成功+错误用例（用表驱动减少重复），断言请求路径正确与返回解析正确：`SearchAutocomplete`、`GetGemVersions`、`GetGemLatestVersion`、`GetGemVersionDetail`、`GetTimeFrameVersions`（验证 RFC3339 格式化）、`Downloads`、`VersionDownloads`、`TopDownloads`、`GetDependencies`、`GetReverseDependencies`、`GetVersionReverseDependencies`、`LatestGems`、`JustUpdatedGems`、`GetUserProfile`、`GetOwnedGems`、`GetGemsByOwner`、`GetGemOwners`、`GetAttestations`、`GetGemVersionContents`、`GetMFAStatus`。
 
@@ -834,13 +834,13 @@ func mustParseTime(s string) time.Time {
 }
 ```
 
-- [ ] **Step 4: 验证 repository 读方法覆盖率**
+- [x] **Step 4: 验证 repository 读方法覆盖率**
 Run: `go test -short -run 'TestGetPackage|TestSearch|TestReadMethods|TestGetTimeFrame' -cover ./pkg/repository/ && go test -short -coverprofile=/tmp/c.out ./pkg/repository/ && go tool cover -func /tmp/c.out | grep repository.go`
 Expected:
   - Exit code: 0
   - repository.go 所有方法行覆盖 100%
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 Run: `git add pkg/repository/repository_http_test.go && git commit -m "test(repository): 100% branch coverage for all read methods via HTTP stubbing"`
 
 ---
@@ -851,7 +851,7 @@ Run: `git add pkg/repository/repository_http_test.go && git commit -m "test(repo
 **Files:**
 - Create: `pkg/repository/write_repository_test.go`
 
-- [ ] **Step 1: 测试 PushGem 全分支 — 成功、multipart 构造错误（空文件仍成功写 0 字节）、状态码错误、token 认证、retry 路径**
+- [x] **Step 1: 测试 PushGem 全分支 — 成功、multipart 构造错误（空文件仍成功写 0 字节）、状态码错误、token 认证、retry 路径**
 
 ```go
 package repository
@@ -908,7 +908,7 @@ func TestPushGem_WithProxy(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 测试 YankGem / YankGemWithPlatform — 表单字段、DELETE 方法、错误分支**
+- [x] **Step 2: 测试 YankGem / YankGemWithPlatform — 表单字段、DELETE 方法、错误分支**
 
 ```go
 func TestYankGem_Success(t *testing.T) {
@@ -941,7 +941,7 @@ func TestYankGemWithPlatform_Success(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: 测试 Owner 管理 — AddGemOwner/RemoveGemOwner/UpdateGemOwnerRole 表单字段与方法**
+- [x] **Step 3: 测试 Owner 管理 — AddGemOwner/RemoveGemOwner/UpdateGemOwnerRole 表单字段与方法**
 
 ```go
 func TestAddGemOwner_Success(t *testing.T) {
@@ -983,7 +983,7 @@ func TestUpdateGemOwnerRole_Success(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: 测试 Webhook 管理 — List/Create/Delete/Fire**
+- [x] **Step 4: 测试 Webhook 管理 — List/Create/Delete/Fire**
 
 ```go
 func TestListWebhooks_Success(t *testing.T) {
@@ -1025,7 +1025,7 @@ func TestFireWebhook_Success(t *testing.T) {
 }
 ```
 
-- [ ] **Step 5: 测试 API Key 管理 — GetAPIKey/CreateAPIKey/UpdateAPIKey 的 Basic Auth + 表单分支（MFA/RubygemName/ExpiresAt 为空与非空）**
+- [x] **Step 5: 测试 API Key 管理 — GetAPIKey/CreateAPIKey/UpdateAPIKey 的 Basic Auth + 表单分支（MFA/RubygemName/ExpiresAt 为空与非空）**
 
 ```go
 func TestGetAPIKey_Success(t *testing.T) {
@@ -1116,7 +1116,7 @@ func newUpdateAPIKeyRequest(apiKey string, scopes []string, mfa string) *models.
 }
 ```
 
-- [ ] **Step 6: 测试 GetMyProfile — Basic Auth + 成功/错误**
+- [x] **Step 6: 测试 GetMyProfile — Basic Auth + 成功/错误**
 
 ```go
 func TestGetMyProfile_Success(t *testing.T) {
@@ -1138,7 +1138,7 @@ func TestGetMyProfile_Error(t *testing.T) {
 }
 ```
 
-- [ ] **Step 7: 测试 NewWriteRepository(nil) 分支 — nil options 走默认**
+- [x] **Step 7: 测试 NewWriteRepository(nil) 分支 — nil options 走默认**
 文件已含 `if options == nil { options = NewOptions() }`，补：
 
 ```go
@@ -1149,7 +1149,7 @@ func TestNewWriteRepository_NilOptionsUsesDefaults(t *testing.T) {
 }
 ```
 
-- [ ] **Step 8: 测试 retry 路径 — 写方法在启用 retry 时走 SendRequestWithRetry**
+- [x] **Step 8: 测试 retry 路径 — 写方法在启用 retry 时走 SendRequestWithRetry**
 
 ```go
 func TestWriteRepo_RetryPath(t *testing.T) {
@@ -1166,13 +1166,13 @@ func TestWriteRepo_RetryPath(t *testing.T) {
 }
 ```
 
-- [ ] **Step 9: 验证 write_repository 覆盖率 100%**
+- [x] **Step 9: 验证 write_repository 覆盖率 100%**
 Run: `go test -short -coverprofile=/tmp/w.out ./pkg/repository/ && go tool cover -func /tmp/w.out | grep write_repository.go`
 Expected:
   - Exit code: 0
   - write_repository.go 所有函数 100%
 
-- [ ] **Step 10: 提交**
+- [x] **Step 10: 提交**
 Run: `git add pkg/repository/write_repository_test.go && git commit -m "test(repository): 100% branch coverage for write operations incl auth & retry"`
 
 ---
@@ -1184,7 +1184,7 @@ Run: `git add pkg/repository/write_repository_test.go && git commit -m "test(rep
 - Create: `pkg/repository/bulk_operations_test.go`
 - Create: `pkg/repository/cached_repository_full_test.go`
 
-- [ ] **Step 1: 测试 BulkOptions — NewBulkOptions 默认、WithMaxConcurrency(<=0 忽略)、WithContinueOnError**
+- [x] **Step 1: 测试 BulkOptions — NewBulkOptions 默认、WithMaxConcurrency(<=0 忽略)、WithContinueOnError**
 
 ```go
 package repository
@@ -1217,7 +1217,7 @@ func TestBulkOptionsWithContinueOnError(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 测试 BulkGetPackages 全分支 — 成功、混合错误、ContinueOnError=false 提前返回、context 取消、nil options 默认**
+- [x] **Step 2: 测试 BulkGetPackages 全分支 — 成功、混合错误、ContinueOnError=false 提前返回、context 取消、nil options 默认**
 
 ```go
 func TestBulkGetPackages_AllSuccess(t *testing.T) {
@@ -1278,7 +1278,7 @@ func TestBulkGetPackages_EmptyInput(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: 测试 BulkGetVersions / BulkGetDependencies / BulkGetReverseDependencies — 各 1 成功 + 1 错误**
+- [x] **Step 3: 测试 BulkGetVersions / BulkGetDependencies / BulkGetReverseDependencies — 各 1 成功 + 1 错误**
 
 ```go
 func TestBulkGetVersions_Success(t *testing.T) {
@@ -1316,7 +1316,7 @@ func TestBulkGetReverseDependencies_Success(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: 测试 runWorkerPool 边界 — numWorkers > numJobs 裁剪、numJobs=0**
+- [x] **Step 4: 测试 runWorkerPool 边界 — numWorkers > numJobs 裁剪、numJobs=0**
 
 ```go
 func TestRunWorkerPool_WorkersExceedJobs(t *testing.T) {
@@ -1337,7 +1337,7 @@ func TestRunWorkerPool_WorkersExceedJobs(t *testing.T) {
 }
 ```
 
-- [ ] **Step 5: 测试 CachedRepository 全部 22 方法 + Close/ClearCache/GetCacheStats + 类型断言失败分支**
+- [x] **Step 5: 测试 CachedRepository 全部 22 方法 + Close/ClearCache/GetCacheStats + 类型断言失败分支**
 
 用 fake repo（实现 Repository 接口、记录调用、可控返回/错误）驱动 cache miss/hit/error 三态：
 
@@ -1408,13 +1408,13 @@ func TestNewCachedRepository_NilCacheCreatesMemory(t *testing.T) {
 }
 ```
 
-- [ ] **Step 6: 验证 bulk + cached 覆盖率 100%**
+- [x] **Step 6: 验证 bulk + cached 覆盖率 100%**
 Run: `go test -short -coverprofile=/tmp/bc.out ./pkg/repository/ && go tool cover -func /tmp/bc.out | grep -E "bulk_operations.go|cached_repository.go"`
 Expected:
   - Exit code: 0
   - 两文件所有函数 100%
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 Run: `git add pkg/repository/bulk_operations_test.go pkg/repository/cached_repository_full_test.go && git commit -m "test(repository): 100% coverage for bulk ops and cached repository"`
 
 ---
@@ -1428,7 +1428,7 @@ Run: `git add pkg/repository/bulk_operations_test.go pkg/repository/cached_repos
 - Modify: `pkg/install/installer_test.go`
 - Create: `pkg/install/runner_test.go`
 
-- [ ] **Step 1: 抽 commandRunner 接口注入 — 让 installVia* / runCommand 可测，默认实现保持原行为**
+- [x] **Step 1: 抽 commandRunner 接口注入 — 让 installVia* / runCommand 可测，默认实现保持原行为**
 
 文件: `pkg/install/installer.go`，在 Installer 结构体加字段，新增接口与默认实现：
 
@@ -1475,7 +1475,7 @@ func NewInstaller(options ...*InstallOptions) *Installer {
 }
 ```
 
-- [ ] **Step 2: detectOS / detectArch 改为包级变量可注入 — 覆盖 runtime.GOOS 各分支**
+- [x] **Step 2: detectOS / detectArch 改为包级变量可注入 — 覆盖 runtime.GOOS 各分支**
 
 ```go
 // detectOSFn / detectArchFn are package-level so tests can override them
@@ -1488,7 +1488,7 @@ var (
 
 `DetectPlatform` 内 `info.OS = detectOS()` → `info.OS = detectOSFn()`，`info.Arch = detectArch()` → `info.Arch = detectArchFn()`。
 
-- [ ] **Step 3: 补 installer_test.go — 用 fake runner 覆盖所有 installVia* 成功/失败分支**
+- [x] **Step 3: 补 installer_test.go — 用 fake runner 覆盖所有 installVia* 成功/失败分支**
 
 ```go
 package install
@@ -1591,7 +1591,7 @@ func TestInstallViaChoco_NoVersion(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: 补平台检测分支测试 — detectOS/detectArch 全分支、readOSRelease 全 ID、checkDistroFiles、inferFromPackageManager、detectPackageManager 各 OS**
+- [x] **Step 4: 补平台检测分支测试 — detectOS/detectArch 全分支、readOSRelease 全 ID、checkDistroFiles、inferFromPackageManager、detectPackageManager 各 OS**
 
 ```go
 func TestDetectOS_AllBranches(t *testing.T) {
@@ -1652,7 +1652,7 @@ func readOSRelease() LinuxDistro {
 
 测试 `parseDistroFromOSRelease` 覆盖所有 ID + ID_LIKE 分支；`checkDistroFiles` 重构为 `checkDistroFilesByPath(root string)` 接收路径，t.TempDir() 构造文件覆盖各分支。
 
-- [ ] **Step 5: 补 extractVersion / isVersionString / PlatformInfo.String / InstallOptions With* / runCommand 边界测试**
+- [x] **Step 5: 补 extractVersion / isVersionString / PlatformInfo.String / InstallOptions With* / runCommand 边界测试**
 
 ```go
 func TestExtractVersion(t *testing.T) {
@@ -1737,7 +1737,7 @@ func TestFileExists(t *testing.T) {
 }
 ```
 
-- [ ] **Step 6: 补 Install 端到端（fake runner）— 已安装跳过、未安装走各 PM、验证失败、bundler 失败不阻断**
+- [x] **Step 6: 补 Install 端到端（fake runner）— 已安装跳过、未安装走各 PM、验证失败、bundler 失败不阻断**
 
 ```go
 func TestInstall_AlreadyInstalled_SkipsInstall(t *testing.T) {
@@ -1760,13 +1760,13 @@ func TestInstall_AlreadyInstalled_SkipsInstall(t *testing.T) {
 
 注：`Install` 调真实 `IsInstalled()`（不可注入）。**为达 100%，需把 `checkRubyInstalled` 也纳入 runner 接口**——在 `commandRunner` 加 `rubyInstalled() (bool, *RubyInfo, error)`，默认实现调 `checkRubyInstalled`，`IsInstalled` 调 `i.runner.rubyInstalled()`。这样 Install 全流程可用 fake runner 走通。补充接口方法 + fake 实现，覆盖：已安装返回、未安装、bundler 开/关、bundler 失败。
 
-- [ ] **Step 7: 验证 pkg/install 覆盖率 100%**
+- [x] **Step 7: 验证 pkg/install 覆盖率 100%**
 Run: `go test -short -cover ./pkg/install/`
 Expected:
   - Exit code: 0
   - Output contains: "coverage: 100.0%"
 
-- [ ] **Step 8: 提交**
+- [x] **Step 8: 提交**
 Run: `git add pkg/install/installer.go pkg/install/installer_test.go pkg/install/runner_test.go && git commit -m "refactor(install): inject commandRunner for testability; 100% coverage"`
 
 ---
@@ -1780,7 +1780,7 @@ Run: `git add pkg/install/installer.go pkg/install/installer_test.go pkg/install
 - Modify: `README.zh-CN.md`
 - GitHub repo description via `gh repo edit`
 
-- [ ] **Step 1: 测试 cobra 命令注册与 flag 解析 — 无网络，仅验证命令树结构与 flag 绑定**
+- [x] **Step 1: 测试 cobra 命令注册与 flag 解析 — 无网络，仅验证命令树结构与 flag 绑定**
 
 ```go
 package main
@@ -1863,7 +1863,7 @@ func TestPrintJSON_NoError(t *testing.T) {
 
 注：需把 main.go 的 root 构造抽成 `buildRootCmd() *cobra.Command`（main 调用它），便于测试。`parseGems` 来自 bulk.go。
 
-- [ ] **Step 2: 重构 main.go 抽出 buildRootCmd — 支持测试调用**
+- [x] **Step 2: 重构 main.go 抽出 buildRootCmd — 支持测试调用**
 
 ```go
 // buildRootCmd constructs the root cobra command with all subcommands registered.
@@ -1891,7 +1891,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 3: 测试写命令 RunE（注入 fake repo）— 验证 exit code / JSON / 文本输出路径**
+- [x] **Step 3: 测试写命令 RunE（注入 fake repo）— 验证 exit code / JSON / 文本输出路径**
 
 对至少 get/yank/push/bulk-get 各跑一次 `Execute`，用 stubbed repo（设 flagServer 指向 httptest.Server 或用 HTTPClient 注入）。例：
 
@@ -1911,7 +1911,7 @@ func TestGetCmd_StubbedHTTP(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: 强化 README.md — 新增 Agent 专用的端点清单表、错误判定速查、可测性说明**
+- [x] **Step 4: 强化 README.md — 新增 Agent 专用的端点清单表、错误判定速查、可测性说明**
 
 在 README.md 的 "Agent Quick Reference" 后新增章节（保持现有结构，插入新内容）：
 
@@ -1944,11 +1944,11 @@ network. `pkg/install` exposes a `commandRunner` seam for the same purpose. See
 `pkg/repository/testutil_test.go`.
 ```
 
-- [ ] **Step 5: 同步 README.zh-CN.md — 翻译新增章节**
+- [x] **Step 5: 同步 README.zh-CN.md — 翻译新增章节**
 
 将 Step 4 的三块内容译为简体中文，插入对应位置（端点参考表 / 错误判定决策树 / 可测性说明）。
 
-- [ ] **Step 6: 校正 GitHub 仓库描述 — 改为更准确的描述**
+- [x] **Step 6: 校正 GitHub 仓库描述 — 改为更准确的描述**
 
 先确认当前描述问题：现描述 "A production-ready Go SDK for the RubyGems.org API — built for AI agents." 用户认为不准确。核查实际能力：SDK + CLI + 自动安装 Ruby + 镜像 + 缓存 + 重试 + 批量。新描述更全面：
 
@@ -1957,17 +1957,17 @@ Expected:
   - Exit code: 0
   - `gh repo view` description 更新为新文本
 
-- [ ] **Step 7: 验证全部测试 + 覆盖率 + lint**
+- [x] **Step 7: 验证全部测试 + 覆盖率 + lint**
 Run: `go test -short -race ./... && go test -short -cover ./pkg/cache ./pkg/install ./pkg/repository | tail -5 && golangci-lint run ./...`
 Expected:
   - Exit code: 0
   - cache/install/repository 三个包覆盖率均 100.0%
   - golangci-lint 无输出
 
-- [ ] **Step 8: 提交**
+- [x] **Step 8: 提交**
 Run: `git add cmd/rubygems/commands_test.go cmd/rubygems/main.go README.md README.zh-CN.md && git commit -m "test(cmd): cobra command tests; docs: agent-focused README + corrected repo description"`
 
-- [ ] **Step 9: 推送并验证 CI**
+- [x] **Step 9: 推送并验证 CI**
 Run: `git push origin main`
 Expected:
   - Go Tests + Deploy Website CI 全绿
