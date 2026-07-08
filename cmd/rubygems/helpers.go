@@ -67,6 +67,16 @@ func buildOptions() *repository.Options {
 
 // newRepo builds a read Repository from global flags, optionally wrapped with cache.
 func newRepo() repository.Repository {
+	return newRepoFunc()
+}
+
+// newRepoFunc is the factory used by newRepo. Tests swap it to inject a stubbed
+// Repository (e.g. one pointed at an httptest.Server) without touching the real
+// flag-driven construction.
+var newRepoFunc = defaultNewRepo
+
+// defaultNewRepo is the flag-driven Repository construction used in production.
+func defaultNewRepo() repository.Repository {
 	var repo repository.Repository
 	switch {
 	case flagServer != "":
@@ -91,6 +101,14 @@ func newRepo() repository.Repository {
 
 // newWriteRepo builds a WriteRepository from global flags (requires --token or basic auth).
 func newWriteRepo() *repository.WriteRepositoryImpl {
+	return newWriteRepoFunc()
+}
+
+// newWriteRepoFunc is the factory used by newWriteRepo; tests may swap it.
+var newWriteRepoFunc = defaultNewWriteRepo
+
+// defaultNewWriteRepo is the flag-driven WriteRepository construction used in production.
+func defaultNewWriteRepo() *repository.WriteRepositoryImpl {
 	return repository.NewWriteRepository(buildOptions())
 }
 

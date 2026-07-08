@@ -24,6 +24,18 @@ import (
 )
 
 func main() {
+	root := buildRootCmd()
+	if err := root.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		exitCode = 1
+	}
+	os.Exit(exitCode)
+}
+
+// buildRootCmd assembles the root cobra command with all subcommands and global
+// flags registered. Extracted from main() so tests can drive it via SetArgs and
+// capture stdout/exitCode without spawning a process.
+func buildRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "rubygems",
 		Short: "RubyGems.org API CLI — query, search, publish, and auto-install",
@@ -87,10 +99,5 @@ Global flags (mirror, token, proxy, cache, retry, json) apply to most commands.`
 		installCmd(),
 		platformCmd(),
 	)
-
-	if err := root.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		exitCode = 1
-	}
-	os.Exit(exitCode)
+	return root
 }
