@@ -118,14 +118,12 @@ func NewWriteRepository(options *Options) *WriteRepositoryImpl {
 	}
 }
 
-// PushGem publish (push) a gem to RubyGems.org
-// POST /api/v1/gems
-func (w *WriteRepositoryImpl) PushGem(ctx context.Context, gemFile []byte) (string, error) {
-	targetUrl := fmt.Sprintf("%s/api/v1/gems", w.options.ServerURL)
-
-	// Create multipart form
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+// buildGemMultipart writes the gem file into a multipart form on w and returns
+// the form's Content-Type. It is extracted from PushGem so the error branches
+// (which are unreachable for an in-memory bytes.Buffer but reachable when w is
+// a failing writer) can be covered by tests.
+func buildGemMultipart(gemFile []byte, w io.Writer) (string, error) {
+	writer := multipart.NewWriter(w)
 
 	part, err := writer.CreateFormFile("file", "gem.gem")
 	if err != nil {
@@ -140,9 +138,23 @@ func (w *WriteRepositoryImpl) PushGem(ctx context.Context, gemFile []byte) (stri
 		return "", fmt.Errorf("closing multipart writer: %w", err)
 	}
 
+	return writer.FormDataContentType(), nil
+}
+
+// PushGem publish (push) a gem to RubyGems.org
+// POST /api/v1/gems
+func (w *WriteRepositoryImpl) PushGem(ctx context.Context, gemFile []byte) (string, error) {
+	targetUrl := fmt.Sprintf("%s/api/v1/gems", w.options.ServerURL)
+
+	// Create multipart form
+	body := &bytes.Buffer{}
+	contentType, err := buildGemMultipart(gemFile, body)
+	if err != nil {
+		return "", err
+	}
+
 	// Store the multipart body bytes for retry support
 	multipartBytes := body.Bytes()
-	contentType := writer.FormDataContentType()
 
 	responseHandler := func(httpResponse *http.Response) (string, error) {
 		respBody, err := io.ReadAll(httpResponse.Body)
@@ -158,6 +170,15 @@ func (w *WriteRepositoryImpl) PushGem(ctx context.Context, gemFile []byte) (stri
 	}
 
 	options := requests.NewOptions[any, string](targetUrl, responseHandler)
+
+	// Inject custom HTTP client transport for test stubbing
+	if w.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = w.options.HTTPClient.Transport
+			client.Timeout = w.options.HTTPClient.Timeout
+			return nil
+		})
+	}
 
 	// Set multipart body
 	options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
@@ -387,6 +408,15 @@ func (w *WriteRepositoryImpl) sendFormRequest(ctx context.Context, method, targe
 
 	options := requests.NewOptions[any, string](targetUrl, responseHandler)
 
+	// Inject custom HTTP client transport for test stubbing
+	if w.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = w.options.HTTPClient.Transport
+			client.Timeout = w.options.HTTPClient.Timeout
+			return nil
+		})
+	}
+
 	// Set request body and Content-Type
 	options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
 		request.Method = method
@@ -438,6 +468,15 @@ func (w *WriteRepositoryImpl) sendFormRequestWithBasicAuth(ctx context.Context, 
 	}
 
 	options := requests.NewOptions[any, string](targetUrl, responseHandler)
+
+	// Inject custom HTTP client transport for test stubbing
+	if w.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = w.options.HTTPClient.Transport
+			client.Timeout = w.options.HTTPClient.Timeout
+			return nil
+		})
+	}
 
 	// Set request body and Content-Type
 	options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {

@@ -25,6 +25,26 @@ import (
 )
 
 // ============================================================
+// Injectable OS hooks (package-level so tests can replace them)
+// ============================================================
+
+// osReadFile reads a file's contents. Defaults to os.ReadFile; tests may swap
+// it to feed synthetic os-release / distro-file content.
+var osReadFile = os.ReadFile
+
+// osStat stats a path. Defaults to os.Stat; tests may swap it to simulate
+// distro-file presence without touching the filesystem.
+var osStat = os.Stat
+
+// detectOSFunc returns the current OS. Defaults to detectOS (which reads
+// runtime.GOOS); tests may swap it to simulate other operating systems.
+var detectOSFunc = detectOS
+
+// detectArchFunc returns the current architecture. Defaults to detectArch
+// (which reads runtime.GOARCH); tests may swap it to simulate other archs.
+var detectArchFunc = detectArch
+
+// ============================================================
 // OS and architecture type definitions
 // ============================================================
 
@@ -273,10 +293,10 @@ func (i *Installer) DetectPlatform() (*PlatformInfo, error) {
 	info := &PlatformInfo{}
 
 	// Detect OS
-	info.OS = detectOS()
+	info.OS = detectOSFunc()
 
 	// Detect architecture
-	info.Arch = detectArch()
+	info.Arch = detectArchFunc()
 
 	// If Linux, detect distribution
 	if info.OS == OSLinux {
@@ -402,7 +422,13 @@ func (i *Installer) Install(ctx context.Context) (*InstallResult, error) {
 
 // detectOS detects current OS
 func detectOS() OperatingSystem {
-	switch runtime.GOOS {
+	return detectOSFrom(runtime.GOOS)
+}
+
+// detectOSFrom maps a GOOS string to an OperatingSystem. It is a pure function
+// (no runtime/env dependency) so it can be unit-tested for every branch.
+func detectOSFrom(goos string) OperatingSystem {
+	switch goos {
 	case "linux":
 		return OSLinux
 	case "darwin":
@@ -416,7 +442,13 @@ func detectOS() OperatingSystem {
 
 // detectArch detects current CPU architecture
 func detectArch() Architecture {
-	switch runtime.GOARCH {
+	return detectArchFrom(runtime.GOARCH)
+}
+
+// detectArchFrom maps a GOARCH string to an Architecture. It is a pure function
+// so it can be unit-tested for every branch.
+func detectArchFrom(goarch string) Architecture {
+	switch goarch {
 	case "amd64":
 		return ArchAMD64
 	case "arm64":
@@ -452,7 +484,14 @@ func detectLinuxDistro() (LinuxDistro, error) {
 
 // readOSRelease reads distribution info from /etc/os-release
 func readOSRelease() LinuxDistro {
-	data, err := os.ReadFile("/etc/os-release")
+	return readOSReleaseFrom("/etc/os-release", osReadFile)
+}
+
+// readOSReleaseFrom parses the distro from an os-release file at the given path,
+// using the provided reader (os.ReadFile by default). Pure-ish: the file read
+// is injected so the parsing logic is fully testable for every distro branch.
+func readOSReleaseFrom(path string, read func(string) ([]byte, error)) LinuxDistro {
+	data, err := read(path)
 	if err != nil {
 		return DistroUnknown
 	}
@@ -522,13 +561,20 @@ func parseOSReleaseField(data, field string) string {
 
 // checkDistroFiles identifies distribution by checking distro-specific files
 func checkDistroFiles() LinuxDistro {
+	return checkDistroFilesAt(osReadFile, fileExists)
+}
+
+// checkDistroFilesAt identifies the distribution by probing distro-specific
+// files, using injected file-read and file-exists helpers so every branch is
+// unit-testable without touching the real filesystem.
+func checkDistroFilesAt(read func(string) ([]byte, error), exists func(string) bool) LinuxDistro {
 	// Debian
-	if fileExists("/etc/debian_version") {
+	if exists("/etc/debian_version") {
 		return DistroDebian
 	}
 	// Red Hat family
-	if fileExists("/etc/redhat-release") {
-		content, err := os.ReadFile("/etc/redhat-release")
+	if exists("/etc/redhat-release") {
+		content, err := read("/etc/redhat-release")
 		if err == nil {
 			contentLower := strings.ToLower(string(content))
 			switch {
@@ -547,16 +593,16 @@ func checkDistroFiles() LinuxDistro {
 		return DistroCentOS // default to CentOS
 	}
 	// Alpine
-	if fileExists("/etc/alpine-release") {
+	if exists("/etc/alpine-release") {
 		return DistroAlpine
 	}
 	// Arch
-	if fileExists("/etc/arch-release") {
+	if exists("/etc/arch-release") {
 		return DistroArch
 	}
 	// Amazon Linux
-	if fileExists("/etc/system-release") {
-		content, err := os.ReadFile("/etc/system-release")
+	if exists("/etc/system-release") {
+		content, err := read("/etc/system-release")
 		if err == nil && strings.Contains(strings.ToLower(string(content)), "amazon") {
 			return DistroAmazon
 		}
@@ -694,7 +740,9 @@ func checkRubyInstalled() (bool, *RubyInfo, error) {
 	// Get Ruby version
 	rubyVersion, err := getCommandOutput("ruby", "--version")
 	if err != nil {
-		return false, nil, nil
+		// ruby is on PATH but `ruby --version` failed — treat as a real error
+		// (distinct from "ruby not found") so callers can surface it.
+		return false, nil, fmt.Errorf("failed to get ruby version: %w", err)
 	}
 	// ruby --version output format: "ruby 3.2.2 (2023-03-30) [x86_64-linux]"
 	rubyVersion = extractVersion(rubyVersion)
@@ -1013,8 +1061,26 @@ func (i *Installer) installViaZypper(ctx context.Context, platform *PlatformInfo
 // Utility functions
 // ============================================================
 
-// runCommand executes a system command
-func runCommand(ctx context.Context, options *InstallOptions, name string, args ...string) error {
+// commandRunner abstracts the OS/exec calls used by the installer so that
+// command lookup, execution, and output capture can be fully replaced in
+// unit tests without spawning real processes or touching PATH.
+type commandRunner interface {
+	// LookPath resolves an executable name to a path, mirroring exec.LookPath.
+	LookPath(name string) (string, error)
+	// Run executes a command with a context/timeout and sudo handling, mirroring runCommand.
+	Run(ctx context.Context, options *InstallOptions, name string, args ...string) error
+	// Output executes a command and returns its stdout, mirroring getCommandOutput.
+	Output(name string, args ...string) (string, error)
+	// IsRoot reports whether the current process is running as root.
+	IsRoot() bool
+}
+
+// osRunner is the default commandRunner backed by the real os/exec package.
+type osRunner struct{}
+
+func (osRunner) LookPath(name string) (string, error) { return exec.LookPath(name) }
+
+func (osRunner) Run(ctx context.Context, options *InstallOptions, name string, args ...string) error {
 	timeout := 600
 	if options != nil && options.TimeoutSeconds > 0 {
 		timeout = options.TimeoutSeconds
@@ -1042,23 +1108,7 @@ func runCommand(ctx context.Context, options *InstallOptions, name string, args 
 	return nil
 }
 
-// findCommand finds executable path of a command
-func findCommand(name string) (string, error) {
-	path, err := exec.LookPath(name)
-	if err != nil {
-		return "", fmt.Errorf("command not found: %s", name)
-	}
-	return path, nil
-}
-
-// commandExists checks if command exists
-func commandExists(name string) bool {
-	_, err := exec.LookPath(name)
-	return err == nil
-}
-
-// getCommandOutput executes command and returns output
-func getCommandOutput(name string, args ...string) (string, error) {
+func (osRunner) Output(name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	output, err := cmd.Output()
 	if err != nil {
@@ -1067,9 +1117,40 @@ func getCommandOutput(name string, args ...string) (string, error) {
 	return string(output), nil
 }
 
+func (osRunner) IsRoot() bool { return os.Getuid() == 0 }
+
+// runner is the package-level command runner used by runCommand/findCommand/etc.
+// Tests may swap it (with t.Cleanup to restore) to inject deterministic behavior.
+var runner commandRunner = osRunner{}
+
+// runCommand executes a system command
+func runCommand(ctx context.Context, options *InstallOptions, name string, args ...string) error {
+	return runner.Run(ctx, options, name, args...)
+}
+
+// findCommand finds executable path of a command
+func findCommand(name string) (string, error) {
+	path, err := runner.LookPath(name)
+	if err != nil {
+		return "", fmt.Errorf("command not found: %s", name)
+	}
+	return path, nil
+}
+
+// commandExists checks if command exists
+func commandExists(name string) bool {
+	_, err := runner.LookPath(name)
+	return err == nil
+}
+
+// getCommandOutput executes command and returns output
+func getCommandOutput(name string, args ...string) (string, error) {
+	return runner.Output(name, args...)
+}
+
 // isRunningAsRoot checks if running as root
 func isRunningAsRoot() bool {
-	return os.Getuid() == 0
+	return runner.IsRoot()
 }
 
 // isRootRequired checks if command requires root
@@ -1088,7 +1169,7 @@ func isRootRequired(cmd string) bool {
 
 // fileExists checks if file exists
 func fileExists(path string) bool {
-	info, err := os.Stat(path)
+	info, err := osStat(path)
 	if err != nil {
 		return false
 	}

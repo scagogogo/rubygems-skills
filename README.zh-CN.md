@@ -678,6 +678,39 @@ go test -v ./...
 
 # 带竞态检测运行
 go test -short -race -v ./...
+
+# 覆盖率报告
+go test -short -coverprofile=cover.out ./... && go tool cover -func=cover.out | tail -1
+```
+
+**覆盖率目标。** `pkg/` 各包追求 100% 语句覆盖；`cmd/`（CLI 薄封装层）约 89% ——
+`main()` 是入口点、`installCmd` 驱动真实系统包管理器，二者刻意不纳入隔离单测。
+运行 `go tool cover -func=cover.out` 可查看每个函数的覆盖率。
+
+### 可测性设计
+
+所有 I/O（HTTP、文件系统、`os/exec`、运行时检测）都隐藏在可注入的包级接缝之后，
+使单元测试在无网络、无真实子进程、无宿主机改动的前提下运行：
+
+- **HTTP**：`Options.SetHTTPClient(http.Client)` 允许测试注入 `httptest.Server`
+  支撑的 transport；镜像/自定义构造器接受自定义服务器 URL。
+- **CLI 工厂**：`cmd/rubygems` 暴露 `newRepoFunc` / `newWriteRepoFunc` 包级变量
+  与 `buildRootCmd()` 辅助函数，测试可注入指向 `httptest.Server` 的桩仓库，
+  通过 `SetArgs` 驱动 cobra 并用 `os.Pipe` 捕获 stdout。
+- **安装器**：`pkg/install` 将每一次 `os.ReadFile` / `os.Stat` / `exec.LookPath` /
+  `exec.Command` / `runtime.GOOS` 调用都路由到可注入变量（`osReadFile`、`osStat`、
+  `detectOSFunc`、`detectArchFunc`、`runner`）以及带可编程 `fakeRunner` 的
+  `commandRunner` 接口，覆盖每个平台 / 包管理器 / 发行版分支，达到 100% 覆盖。
+
+### 错误决策树
+
+```
+err != nil
+ │
+ ├─ repository.IsNotFound(err)      → 404：gem/版本/用户不存在
+ ├─ repository.IsRateLimited(err)   → 429：退避、重试，或加 --token
+ ├─ repository.IsUnauthorized(err)  → 401/403：token 或 Basic 认证缺失/无效
+ └─ else → errors.As(err, &apiErr)  → apiErr.StatusCode / .URL / .Response
 ```
 
 ---

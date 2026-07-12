@@ -47,6 +47,30 @@ func TestRepositoryMirrorURLs(t *testing.T) {
 		}
 		assert.Equal(t, ServerURLAliYun, repoImpl.options.ServerURL)
 	})
+
+	// Test Custom repository URL
+	t.Run("Custom URL", func(t *testing.T) {
+		repo := NewCustomRepository("https://gems.internal.corp")
+		assert.NotNil(t, repo)
+
+		repoImpl, ok := repo.(*RepositoryImpl)
+		if !ok {
+			t.Fatalf("Expected *RepositoryImpl, got %T", repo)
+		}
+		assert.Equal(t, "https://gems.internal.corp", repoImpl.options.ServerURL)
+	})
+}
+
+// TestMirrorConstantsDistinct ensures no two mirror constants collide.
+func TestMirrorConstantsDistinct(t *testing.T) {
+	urls := []string{DefaultServerURL, ServerURLRubyChina, ServerURLTSingHua, ServerURLAliYun}
+	for i, a := range urls {
+		for j, b := range urls {
+			if i != j {
+				assert.NotEqual(t, a, b, "mirror constants must be distinct: %q vs %q", a, b)
+			}
+		}
+	}
 }
 
 // Live API tests are skipped by default as they require network access

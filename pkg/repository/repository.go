@@ -376,6 +376,15 @@ func (x *RepositoryImpl) getBytes(ctx context.Context, targetUrl string) ([]byte
 
 	options := requests.NewOptions[any, []byte](targetUrl, responseHandler)
 
+	// Inject custom HTTP client transport for test stubbing
+	if x.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = x.options.HTTPClient.Transport
+			client.Timeout = x.options.HTTPClient.Timeout
+			return nil
+		})
+	}
+
 	// Set proxy
 	if x.options.Proxy != "" {
 		options.AppendRequestSetting(requests.RequestSettingProxy(x.options.Proxy))
@@ -424,6 +433,15 @@ func (x *RepositoryImpl) getBytesWithBasicAuth(ctx context.Context, targetUrl, u
 	}
 
 	options := requests.NewOptions[any, []byte](targetUrl, responseHandler)
+
+	// Inject custom HTTP client transport for test stubbing
+	if x.options.HTTPClient != nil {
+		options.AppendRequestSetting(func(client *http.Client, request *http.Request) error {
+			client.Transport = x.options.HTTPClient.Transport
+			client.Timeout = x.options.HTTPClient.Timeout
+			return nil
+		})
+	}
 
 	// Set proxy
 	if x.options.Proxy != "" {
