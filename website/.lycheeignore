@@ -1,0 +1,11 @@
+# 文档中演示镜像源配置、webhook 示例、本地代理的占位 URL，均非真实死链
+example.com
+127.0.0.1
+10.0.0.1
+gems.corp.internal
+gems.example.com
+gems.ruby-china.com
+mirrors.tuna.tsinghua.edu.cn
+mirrors.aliyun.com
+localhost
+your-rubygems-host.example
