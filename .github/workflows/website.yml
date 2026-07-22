@@ -44,6 +44,18 @@ jobs:
         working-directory: website
         run: npm run build
 
+      - name: Check for dead links in built HTML output
+        working-directory: website
+        run: |
+          cargo install lychee --locked
+          lychee \
+            --exclude-file .lycheeignore \
+            --timeout 30 --max-redirects 10 --max-concurrency 16 \
+            --no-progress --accept 200,301,302,308,999 \
+            --format compact \
+            '.vitepress/dist/**/*.html' \
+            '../README.md' '../README.zh-CN.md'
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
