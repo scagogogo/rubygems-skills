@@ -18,18 +18,20 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: ✅ Auto-approve patch/minor security updates
+      # Note: GITHUB_TOKEN cannot approve PRs (GitHub security restriction),
+      # so we skip approval and directly enable auto-merge. When CI passes,
+      # the PR will merge automatically. For major updates, we just flag them.
+      - name: 🔄 Enable auto-merge for patch/minor updates
         if: |
           steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
           steps.metadata.outputs.update-type == 'version-update:semver-minor'
         run: |
-          gh pr review "$PR_URL" --approve --body "Auto-approved by Dependabot Auto-Merge workflow."
           gh pr merge "$PR_URL" --merge --auto --subject "chore(deps): ${{ steps.metadata.outputs.dependency-names }} ${{ steps.metadata.outputs.update-type }}"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: ⚠️ Request review for major updates
+      - name: ⚠️ Flag major updates for manual review
         if: steps.metadata.outputs.update-type == 'version-update:semver-major'
         run: |
           gh pr edit "$PR_URL" --add-label "major-update"
